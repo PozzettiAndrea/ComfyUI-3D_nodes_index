@@ -298,6 +298,13 @@ def extract_media_from_readme(readme_content, owner, repo, branch):
         url = (match.group(1) or match.group(2)).strip()
         media.append(normalize_url(url, owner, repo, branch))
 
+    # Standalone GitHub asset URLs (rendered as inline media by GitHub)
+    asset_pattern = r'https://github\.com/(?:user-attachments/assets/[a-f0-9-]+|[^/]+/[^/]+/assets/\d+/[a-f0-9-]+)'
+    for match in re.finditer(asset_pattern, readme_content):
+        url = match.group(0).strip()
+        if url not in media:  # Avoid duplicates
+            media.append(url)
+
     return [url for url in media if url and is_media_url(url)]
 
 def normalize_url(url, owner, repo, branch):
