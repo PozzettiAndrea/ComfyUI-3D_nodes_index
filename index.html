@@ -35,7 +35,7 @@
 
         .cards-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 20px;
             padding: 20px;
             width: 100%;
@@ -61,7 +61,7 @@
 
         .card img {
             width: 100%;
-            height: 180px;
+            height: 160px;
             object-fit: cover;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
@@ -73,23 +73,58 @@
             flex-grow: 1;
         }
 
-        .card-title {
-            font-size: 1.1em;
-            font-weight: bold;
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 5px;
         }
 
-        .card-author {
+        .card-title {
+            font-size: 1.05em;
+            font-weight: bold;
+            flex: 1;
+        }
+
+        .card-stars {
+            display: flex;
+            align-items: center;
+            gap: 3px;
             font-size: 0.85em;
-            color: #888;
+            color: #666;
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+            white-space: nowrap;
+        }
+
+        .card-stars i {
+            color: #f0ad4e;
+            font-size: 0.9em;
+        }
+
+        .card-authors {
+            font-size: 0.8em;
+            color: #666;
             margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .card-authors .node-author {
+            color: #0366d6;
+        }
+
+        .card-authors .model-author {
+            color: #888;
         }
 
         .card-description {
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: #555;
             margin-bottom: 10px;
             flex-grow: 1;
+            line-height: 1.4;
         }
 
         .card-tags {
@@ -102,7 +137,7 @@
         .tag {
             padding: 2px 8px;
             border-radius: 12px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 500;
         }
 
@@ -120,7 +155,7 @@
             margin-right: 10px;
             color: #0366d6;
             text-decoration: none;
-            font-size: 0.9em;
+            font-size: 0.85em;
         }
 
         .card-links a:hover {
@@ -172,7 +207,7 @@
             text-decoration: none;
             color: #333;
             padding: 6px 8px;
-            font-size: 14px;
+            font-size: 13px;
             display: block;
             border-radius: 4px;
             transition: all 0.3s ease;
@@ -197,7 +232,7 @@
             border-radius: 14px;
             cursor: pointer;
             background: #e9ecef;
-            font-size: 12px;
+            font-size: 11px;
             transition: all 0.2s ease;
         }
 
@@ -210,12 +245,17 @@
             color: white;
         }
 
-        /* CSS-only filtering using :has() */
-        body:has(#filter-tencent:checked) .card:not([data-tags*="tencent"]) { display: none; }
-        body:has(#filter-vast-ai:checked) .card:not([data-tags*="vast-ai"]) { display: none; }
-        body:has(#filter-microsoft:checked) .card:not([data-tags*="microsoft"]) { display: none; }
-        body:has(#filter-stability:checked) .card:not([data-tags*="stability"]) { display: none; }
-        body:has(#filter-community:checked) .card:not([data-tags*="community"]) { display: none; }
+        /* CSS-only OR filtering using :has() */
+        /* When ANY filter is checked, hide all cards first */
+        body:has(.filter-checkbox:checked) .card { display: none; }
+
+        /* Then show cards that match ANY checked filter (OR logic) */
+        body:has(#filter-tencent:checked) .card[data-tags*="tencent"] { display: flex; }
+        body:has(#filter-vast-ai:checked) .card[data-tags*="vast-ai"] { display: flex; }
+        body:has(#filter-microsoft:checked) .card[data-tags*="microsoft"] { display: flex; }
+        body:has(#filter-stability:checked) .card[data-tags*="stability"] { display: flex; }
+        body:has(#filter-meta:checked) .card[data-tags*="meta"] { display: flex; }
+        body:has(#filter-community:checked) .card[data-tags*="community"] { display: flex; }
 
         .content {
             flex: 1;
@@ -303,12 +343,11 @@
             }
 
             .cards-container {
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
                 padding: 10px;
             }
         }
     </style>
-
 </head>
 
 <body>
@@ -316,7 +355,6 @@
         <a href="https://github.com/PozzettiAndrea/ComfyUI-3D_nodes_index" class="title-link">
             <h1>Awesome ComfyUI 3D</h1>
         </a>
-
         <p class="subtitle">
             A curated index of ComfyUI custom nodes for 3D generation, processing, and visualization.
         </p>
@@ -325,7 +363,6 @@
             <span>View on GitHub</span>
         </a>
     </div>
-
 
     <div class="main-container">
         <!-- Sidebar Navigation -->
@@ -346,7 +383,7 @@
             </div>
 
             <div class="sidebar-section">
-                <div class="sidebar-section-title">Filter by Creator</div>
+                <div class="sidebar-section-title">Filter by Model Author</div>
                 <div class="filters">
                     <input type="checkbox" id="filter-tencent" class="filter-checkbox">
                     <label for="filter-tencent" class="filter-label">Tencent</label>
@@ -359,6 +396,9 @@
 
                     <input type="checkbox" id="filter-stability" class="filter-checkbox">
                     <label for="filter-stability" class="filter-label">Stability</label>
+
+                    <input type="checkbox" id="filter-meta" class="filter-checkbox">
+                    <label for="filter-meta" class="filter-label">Meta</label>
 
                     <input type="checkbox" id="filter-community" class="filter-checkbox">
                     <label for="filter-community" class="filter-label">Community</label>
@@ -373,136 +413,238 @@
                 <h2 class="section-title">Image-to-3D</h2>
                 <div class="cards-container">
 
-                    <div class="card" data-tags="community image-to-3d glb">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-3d-pack.jpg" alt="ComfyUI-3D-Pack">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-3D-Pack</div>
-                            <div class="card-author">by MrForExample</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-3D-Pack</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 3.5k</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">MrForExample</span> · <span class="model-author">Multiple models</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-io">image-to-3d</span>
                                 <span class="tag tag-format">glb</span>
                             </div>
-                            <div class="card-description">Comprehensive suite: TripoSR, InstantMesh, CRM, LGM, Era3D, Wonder3D, Unique3D, StableFast3D, 3DGS, NeRF</div>
+                            <div class="card-description">Extensive suite with 20+ models: InstantMesh, CRM, TripoSR, Era3D, Zero123++, Unique3D, 3DGS training/rendering, FlexiCubes, mesh fitting, and orbit camera visualization.</div>
                             <div class="card-links">
-                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="tencent hunyuan3d image-to-3d">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Hunyuan3DWrapper">
+                    <div class="card" data-tags="tencent">
+                        <img src="assets/img/comfyui-hunyuan3dwrapper.png" alt="ComfyUI-Hunyuan3d-2-1">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-Hunyuan3DWrapper</div>
-                            <div class="card-author">by Kijai</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-Hunyuan3d-2-1</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 228</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">visualbruno</span> · <span class="model-author">Tencent</span>
+                            </div>
                             <div class="card-tags">
                                 <span class="tag tag-creator">tencent</span>
                                 <span class="tag tag-model">hunyuan3d</span>
                                 <span class="tag tag-io">image-to-3d</span>
                             </div>
-                            <div class="card-description">Hunyuan3D 2.0 wrapper for high-quality image-to-3D mesh generation</div>
+                            <div class="card-description">Two-stage pipeline: shape generation from images, then texture baking with custom differentiable renderer and xAtlas UV mapping.</div>
                             <div class="card-links">
-                                <a href="https://github.com/kijai/ComfyUI-Hunyuan3DWrapper">GitHub</a>
+                                <a href="https://github.com/visualbruno/ComfyUI-Hunyuan3d-2-1" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="tencent hunyuan3d image-to-3d">
-                        <img src="assets/img/placeholder.svg" alt="Comfyui_Hunyuan3D_EX">
+                    <div class="card" data-tags="tencent">
+                        <img src="assets/img/comfyui-hunyuan3dwrapper.png" alt="ComfyUI-Hunyuan3DWrapper">
                         <div class="card-content">
-                            <div class="card-title">Comfyui_Hunyuan3D_EX</div>
-                            <div class="card-author">by BIMer-99</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-Hunyuan3DWrapper</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 921</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">Kijai</span> · <span class="model-author">Tencent</span>
+                            </div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">tencent</span>
+                                <span class="tag tag-model">hunyuan3d</span>
+                                <span class="tag tag-io">image-to-3d</span>
+                            </div>
+                            <div class="card-description">Two-stage: DiT Flow Matching for shape generation, then texture refinement with custom rasterizer, VAE encoding, and xatlas UV unwrapping.</div>
+                            <div class="card-links">
+                                <a href="https://github.com/kijai/ComfyUI-Hunyuan3DWrapper" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="tencent">
+                        <img src="assets/img/comfyui-hunyuanx.png" alt="ComfyUI-HunyuanX">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-HunyuanX</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 5</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">PozzettiAndrea</span> · <span class="model-author">Tencent</span>
+                            </div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">tencent</span>
+                                <span class="tag tag-model">hunyuan3d</span>
+                                <span class="tag tag-io">image-to-3d</span>
+                            </div>
+                            <div class="card-description">Standard and modular pipelines with PBR multiview texturing, conditioning maps, texture inpainting, latent blending, and multi-format export (GLB, OBJ, FBX, etc.).</div>
+                            <div class="card-links">
+                                <a href="https://github.com/PozzettiAndrea/ComfyUI-HunyuanX" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="tencent">
+                        <img src="assets/img/comfyui-hunyuan3d-part.png" alt="ComfyUI-Hunyuan3D-Part">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-Hunyuan3D-Part</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 32</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">PozzettiAndrea</span> · <span class="model-author">Tencent</span>
+                            </div>
                             <div class="card-tags">
                                 <span class="tag tag-creator">tencent</span>
                                 <span class="tag tag-model">hunyuan3d</span>
                             </div>
-                            <div class="card-description">Simplified Hunyuan3D wrapper with streamlined workflow</div>
+                            <div class="card-description">P3-SAM for 3D mesh segmentation into parts and X-Part diffusion for high-quality part mesh generation with flash attention optimization.</div>
                             <div class="card-links">
-                                <a href="https://github.com/BIMer-99/Comfyui_Hunyuan3D_EX">GitHub</a>
+                                <a href="https://github.com/PozzettiAndrea/ComfyUI-Hunyuan3D-Part" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="stability triposr image-to-3d">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Flowty-TripoSR">
+                    <div class="card" data-tags="tencent">
+                        <img src="assets/img/comfyui-hunyuan3dwrapper.png" alt="Comfyui_Hunyuan3D_EX">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-Flowty-TripoSR</div>
-                            <div class="card-author">by flowtyone</div>
+                            <div class="card-header">
+                                <div class="card-title">Comfyui_Hunyuan3D_EX</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 7</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">BIMer-99</span> · <span class="model-author">Tencent</span>
+                            </div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">tencent</span>
+                                <span class="tag tag-model">hunyuan3d</span>
+                            </div>
+                            <div class="card-description">Six-view generation, 3D visualization with TriMeshViewer, background removal, and trimesh-based optimization without pytorch3d dependency.</div>
+                            <div class="card-links">
+                                <a href="https://github.com/BIMer-99/Comfyui_Hunyuan3D_EX" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="stability">
+                        <img src="assets/img/comfyui-flowty-triposr.png" alt="ComfyUI-Flowty-TripoSR">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-Flowty-TripoSR</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 526</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">flowtyone</span> · <span class="model-author">Stability AI / Tripo AI</span>
+                            </div>
                             <div class="card-tags">
                                 <span class="tag tag-creator">stability</span>
                                 <span class="tag tag-model">triposr</span>
                                 <span class="tag tag-io">image-to-3d</span>
                             </div>
-                            <div class="card-description">Standalone TripoSR implementation for fast image-to-3D</div>
+                            <div class="card-description">State-of-the-art fast feedforward 3D reconstruction from a single image, co-developed by Tripo AI and Stability AI.</div>
                             <div class="card-links">
-                                <a href="https://github.com/flowtyone/ComfyUI-Flowty-TripoSR">GitHub</a>
+                                <a href="https://github.com/flowtyone/ComfyUI-Flowty-TripoSR" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="community crm image-to-3d">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Flowty-CRM">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-flowty-crm.png" alt="ComfyUI-Flowty-CRM">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-Flowty-CRM</div>
-                            <div class="card-author">by flowtyone</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-Flowty-CRM</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 156</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">flowtyone</span> · <span class="model-author">Tsinghua University</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-model">crm</span>
                                 <span class="tag tag-io">image-to-3d</span>
                             </div>
-                            <div class="card-description">Convolutional Reconstruction Model for image-to-3D</div>
+                            <div class="card-description">High-fidelity feed-forward single image-to-3D using Convolutional Reconstruction Models.</div>
                             <div class="card-links">
-                                <a href="https://github.com/flowtyone/ComfyUI-Flowty-CRM">GitHub</a>
+                                <a href="https://github.com/flowtyone/ComfyUI-Flowty-CRM" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="vast-ai triposg image-to-3d gaussian">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-TripoSG">
+                    <div class="card" data-tags="microsoft">
+                        <img src="assets/img/comfyui-trellis.png" alt="ComfyUI_TRELLIS">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-TripoSG</div>
-                            <div class="card-author">by fredconex</div>
-                            <div class="card-tags">
-                                <span class="tag tag-creator">vast-ai</span>
-                                <span class="tag tag-model">triposg</span>
-                                <span class="tag tag-format">gaussian</span>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI_TRELLIS</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 174</div>
                             </div>
-                            <div class="card-description">TripoSG (Tripo Stable Gaussian) for high-quality 3D generation</div>
-                            <div class="card-links">
-                                <a href="https://github.com/fredconex/ComfyUI-TripoSG">GitHub</a>
+                            <div class="card-authors">
+                                <span class="node-author">smthemex</span> · <span class="model-author">Microsoft</span>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="card" data-tags="microsoft trellis image-to-3d">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI_TRELLIS">
-                        <div class="card-content">
-                            <div class="card-title">ComfyUI_TRELLIS</div>
-                            <div class="card-author">by smthemex</div>
                             <div class="card-tags">
                                 <span class="tag tag-creator">microsoft</span>
                                 <span class="tag tag-model">trellis</span>
                                 <span class="tag tag-io">image-to-3d</span>
                             </div>
-                            <div class="card-description">Microsoft TRELLIS for structured latent 3D generation</div>
+                            <div class="card-description">Microsoft TRELLIS for structured latent 3D generation with meshes, 3D Gaussians, and Radiance Fields output.</div>
                             <div class="card-links">
-                                <a href="https://github.com/smthemex/ComfyUI_TRELLIS">GitHub</a>
+                                <a href="https://github.com/smthemex/ComfyUI_TRELLIS" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="microsoft trellis image-to-3d">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-IF_Trellis">
+                    <div class="card" data-tags="microsoft">
+                        <img src="assets/img/comfyui-if-trellis.png" alt="ComfyUI-IF_Trellis">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-IF_Trellis</div>
-                            <div class="card-author">by if-ai</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-IF_Trellis</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 441</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">if-ai</span> · <span class="model-author">Microsoft</span>
+                            </div>
                             <div class="card-tags">
                                 <span class="tag tag-creator">microsoft</span>
                                 <span class="tag tag-model">trellis</span>
                             </div>
-                            <div class="card-description">Alternative TRELLIS wrapper with additional features</div>
+                            <div class="card-description">TRELLIS wrapper for large-scale 3D asset generation with unified Structured LATent (SLAT) representation.</div>
                             <div class="card-links">
-                                <a href="https://github.com/if-ai/ComfyUI-IF_Trellis">GitHub</a>
+                                <a href="https://github.com/if-ai/ComfyUI-IF_Trellis" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="meta">
+                        <img src="assets/img/comfyui-sam3dbody.png" alt="ComfyUI-SAM3DBody">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-SAM3DBody</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 199</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">PozzettiAndrea</span> · <span class="model-author">Meta AI</span>
+                            </div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">meta</span>
+                                <span class="tag tag-io">image-to-3d</span>
+                            </div>
+                            <div class="card-description">Full-body 3D human mesh recovery from single images with body/hand detection modes, mesh visualization, and OBJ/PLY export.</div>
+                            <div class="card-links">
+                                <a href="https://github.com/PozzettiAndrea/ComfyUI-SAM3DBody" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
@@ -515,35 +657,44 @@
                 <h2 class="section-title">Text-to-3D</h2>
                 <div class="cards-container">
 
-                    <div class="card" data-tags="vast-ai text-to-3d api">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Tripo">
+                    <div class="card" data-tags="vast-ai">
+                        <img src="assets/img/comfyui-tripo.png" alt="ComfyUI-Tripo">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-Tripo</div>
-                            <div class="card-author">by VAST-AI-Research</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-Tripo</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 315</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">VAST-AI-Research</span> · <span class="model-author">VAST-AI</span>
+                            </div>
                             <div class="card-tags">
                                 <span class="tag tag-creator">vast-ai</span>
                                 <span class="tag tag-io">text-to-3d</span>
                                 <span class="tag tag-model">api</span>
                             </div>
-                            <div class="card-description">Official Tripo API integration for text/image-to-3D with rigging support</div>
+                            <div class="card-description">Official Tripo API for text/image/multiview-to-3D, texture generation with PBR, mesh refinement, skeleton rigging, and animation retargeting.</div>
                             <div class="card-links">
-                                <a href="https://github.com/VAST-AI-Research/ComfyUI-Tripo">GitHub</a>
+                                <a href="https://github.com/VAST-AI-Research/ComfyUI-Tripo" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="community text-to-3d">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-3d-pack.jpg" alt="ComfyUI-3D-Pack">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-3D-Pack</div>
-                            <div class="card-author">by MrForExample</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-3D-Pack</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 3.5k</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">MrForExample</span> · <span class="model-author">Multiple models</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-io">text-to-3d</span>
                             </div>
-                            <div class="card-description">Text-to-3D via Score Distillation Sampling (SDS) with various models</div>
+                            <div class="card-description">Text-to-3D via Score Distillation Sampling (SDS) with various underlying models.</div>
                             <div class="card-links">
-                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
@@ -556,35 +707,43 @@
                 <h2 class="section-title">Multi-View Generation</h2>
                 <div class="cards-container">
 
-                    <div class="card" data-tags="community multi-view">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack Multi-View">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-3d-pack.jpg" alt="ComfyUI-3D-Pack">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-3D-Pack</div>
-                            <div class="card-author">by MrForExample</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-3D-Pack</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 3.5k</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">MrForExample</span> · <span class="model-author">Multiple models</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-io">multi-view</span>
                             </div>
-                            <div class="card-description">Zero123++, Era3D, Wonder3D, SV3D for consistent multi-view image generation</div>
+                            <div class="card-description">Zero123++, Era3D, Wonder3D, SV3D for consistent multi-view image generation from single images.</div>
                             <div class="card-links">
-                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="tencent multi-view hunyuan3d">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Hunyuan3DWrapper Multi-View">
+                    <div class="card" data-tags="tencent">
+                        <img src="assets/img/comfyui-hunyuan3dwrapper.png" alt="ComfyUI-Hunyuan3DWrapper">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-Hunyuan3DWrapper</div>
-                            <div class="card-author">by Kijai</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-Hunyuan3DWrapper</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 921</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">Kijai</span> · <span class="model-author">Tencent</span>
+                            </div>
                             <div class="card-tags">
                                 <span class="tag tag-creator">tencent</span>
                                 <span class="tag tag-io">multi-view</span>
-                                <span class="tag tag-model">hunyuan3d</span>
                             </div>
-                            <div class="card-description">Hunyuan3D multi-view diffusion for consistent view synthesis</div>
+                            <div class="card-description">Hunyuan3D multi-view diffusion for consistent view synthesis.</div>
                             <div class="card-links">
-                                <a href="https://github.com/kijai/ComfyUI-Hunyuan3DWrapper">GitHub</a>
+                                <a href="https://github.com/kijai/ComfyUI-Hunyuan3DWrapper" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
@@ -597,34 +756,123 @@
                 <h2 class="section-title">Mesh Processing</h2>
                 <div class="cards-container">
 
-                    <div class="card" data-tags="community mesh-processing">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-GeometryPack">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-geometrypack.png" alt="ComfyUI-GeometryPack">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-GeometryPack</div>
-                            <div class="card-author">by MeshArt3D</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-GeometryPack</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 33</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">PozzettiAndrea</span> · <span class="model-author">Community</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-io">mesh-processing</span>
                             </div>
-                            <div class="card-description">Remesh, boolean operations, UV unwrap, mesh simplification, and more</div>
+                            <div class="card-description">Mesh I/O, remeshing, UV unwrapping, distance metrics, and boolean operations using trimesh, libigl, PyMeshLab, and CGAL.</div>
                             <div class="card-links">
-                                <a href="https://github.com/MeshArt3D/ComfyUI-GeometryPack">GitHub</a>
+                                <a href="https://github.com/PozzettiAndrea/ComfyUI-GeometryPack" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="community mesh-processing">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack Mesh">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-cadabra.png" alt="ComfyUI-CADabra">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-3D-Pack</div>
-                            <div class="card-author">by MrForExample</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-CADabra</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 9</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">PozzettiAndrea</span> · <span class="model-author">Community</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">mesh-processing</span>
+                                <span class="tag tag-format">cad</span>
+                            </div>
+                            <div class="card-description">CAD file processing (STEP, IGES, BREP) with mesh generation and optimization using OpenCASCADE and GMSH.</div>
+                            <div class="card-links">
+                                <a href="https://github.com/PozzettiAndrea/ComfyUI-CADabra" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-direct3d-s2.png" alt="ComfyUI-Direct3D-S2">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-Direct3D-S2</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 36</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">visualbruno</span> · <span class="model-author">Direct3D Research</span>
+                            </div>
+                            <div class="card-tags">
                                 <span class="tag tag-io">mesh-processing</span>
                             </div>
-                            <div class="card-description">Basic mesh operations, format conversion, and preprocessing</div>
+                            <div class="card-description">Image-to-dense-mesh generation or mesh refinement for existing Hunyuan3D outputs using Direct3D-S2 v1.0/1.1 models.</div>
                             <div class="card-links">
-                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                                <a href="https://github.com/visualbruno/ComfyUI-Direct3D-S2" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-geometrypack.png" alt="ComfyUI-CuMesh">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-CuMesh</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 1</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">visualbruno</span> · <span class="model-author">Community</span>
+                            </div>
+                            <div class="card-tags">
+                                <span class="tag tag-io">mesh-processing</span>
+                            </div>
+                            <div class="card-description">Mesh operations integration using the CuMesh project.</div>
+                            <div class="card-links">
+                                <a href="https://github.com/visualbruno/ComfyUI-CuMesh" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-geometrypack.png" alt="ComfyUI-QRemeshify">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-QRemeshify</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 6</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">visualbruno</span> · <span class="model-author">Community</span>
+                            </div>
+                            <div class="card-tags">
+                                <span class="tag tag-io">mesh-processing</span>
+                            </div>
+                            <div class="card-description">Mesh remeshing operations wrapper.</div>
+                            <div class="card-links">
+                                <a href="https://github.com/visualbruno/ComfyUI-QRemeshify" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-3d-pack.jpg" alt="ComfyUI-3D-Pack">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-3D-Pack</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 3.5k</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">MrForExample</span> · <span class="model-author">Multiple models</span>
+                            </div>
+                            <div class="card-tags">
+                                <span class="tag tag-io">mesh-processing</span>
+                            </div>
+                            <div class="card-description">Basic mesh operations, format conversion, and preprocessing utilities.</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
@@ -637,34 +885,63 @@
                 <h2 class="section-title">Texturing</h2>
                 <div class="cards-container">
 
-                    <div class="card" data-tags="community texturing">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Paint3D-Nodes">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-paint3d.png" alt="ComfyUI-Paint3D-Nodes">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-Paint3D-Nodes</div>
-                            <div class="card-author">by N3rd00d</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-Paint3D-Nodes</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 72</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">N3rd00d</span> · <span class="model-author">OpenTexture</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-io">texturing</span>
                             </div>
-                            <div class="card-description">Texture inpainting and generation for 3D meshes</div>
+                            <div class="card-description">3D model texture inpainting and generation based on Paint3D.</div>
                             <div class="card-links">
-                                <a href="https://github.com/N3rd00d/ComfyUI-Paint3D-Nodes">GitHub</a>
+                                <a href="https://github.com/N3rd00d/ComfyUI-Paint3D-Nodes" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="community texturing">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack Texturing">
+                    <div class="card" data-tags="vast-ai">
+                        <img src="assets/img/comfyui-detailgen3d.png" alt="ComfyUI-DetailGen3D">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-3D-Pack</div>
-                            <div class="card-author">by MrForExample</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-DetailGen3D</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 0</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">PozzettiAndrea</span> · <span class="model-author">VAST-AI</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-creator">vast-ai</span>
                                 <span class="tag tag-io">texturing</span>
                             </div>
-                            <div class="card-description">UV texture baking and material assignment</div>
+                            <div class="card-description">Enhance coarse 3D meshes with geometric detail using diffusion-based SDF generation and marching cubes decoding.</div>
                             <div class="card-links">
-                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                                <a href="https://github.com/PozzettiAndrea/ComfyUI-DetailGen3D" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-3d-pack.jpg" alt="ComfyUI-3D-Pack">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-3D-Pack</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 3.5k</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">MrForExample</span> · <span class="model-author">Multiple models</span>
+                            </div>
+                            <div class="card-tags">
+                                <span class="tag tag-io">texturing</span>
+                            </div>
+                            <div class="card-description">UV texture baking and material assignment utilities.</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
@@ -677,52 +954,64 @@
                 <h2 class="section-title">Gaussian Splatting</h2>
                 <div class="cards-container">
 
-                    <div class="card" data-tags="community gaussian">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack 3DGS">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-3d-pack.jpg" alt="ComfyUI-3D-Pack">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-3D-Pack</div>
-                            <div class="card-author">by MrForExample</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-3D-Pack</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 3.5k</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">MrForExample</span> · <span class="model-author">Multiple models</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-format">gaussian</span>
                             </div>
-                            <div class="card-description">3D Gaussian Splatting training and rendering</div>
+                            <div class="card-description">3D Gaussian Splatting training and rendering capabilities.</div>
                             <div class="card-links">
-                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="vast-ai gaussian triposg">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-TripoSG Gaussian">
+                    <div class="card" data-tags="microsoft">
+                        <img src="assets/img/comfyui-trellis.png" alt="ComfyUI_TRELLIS">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-TripoSG</div>
-                            <div class="card-author">by fredconex</div>
-                            <div class="card-tags">
-                                <span class="tag tag-creator">vast-ai</span>
-                                <span class="tag tag-format">gaussian</span>
-                                <span class="tag tag-model">triposg</span>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI_TRELLIS</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 174</div>
                             </div>
-                            <div class="card-description">Tripo Stable Gaussian for high-quality Gaussian output</div>
-                            <div class="card-links">
-                                <a href="https://github.com/fredconex/ComfyUI-TripoSG">GitHub</a>
+                            <div class="card-authors">
+                                <span class="node-author">smthemex</span> · <span class="model-author">Microsoft</span>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="card" data-tags="microsoft gaussian trellis">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI_TRELLIS Gaussian">
-                        <div class="card-content">
-                            <div class="card-title">ComfyUI_TRELLIS</div>
-                            <div class="card-author">by smthemex</div>
                             <div class="card-tags">
                                 <span class="tag tag-creator">microsoft</span>
                                 <span class="tag tag-format">gaussian</span>
-                                <span class="tag tag-model">trellis</span>
                             </div>
-                            <div class="card-description">SLAT representation with Gaussian Splatting output</div>
+                            <div class="card-description">SLAT representation with Gaussian Splatting output support.</div>
                             <div class="card-links">
-                                <a href="https://github.com/smthemex/ComfyUI_TRELLIS">GitHub</a>
+                                <a href="https://github.com/smthemex/ComfyUI_TRELLIS" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="meta">
+                        <img src="assets/img/comfyui-sam3dobjects.png" alt="ComfyUI-SAM3DObjects">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-SAM3DObjects</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 113</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">PozzettiAndrea</span> · <span class="model-author">Meta AI</span>
+                            </div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">meta</span>
+                                <span class="tag tag-format">gaussian</span>
+                            </div>
+                            <div class="card-description">Single-image to 3D Gaussian Splats and textured GLB meshes with automatic precision detection and batch processing support.</div>
+                            <div class="card-links">
+                                <a href="https://github.com/PozzettiAndrea/ComfyUI-SAM3DObjects" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
@@ -735,36 +1024,65 @@
                 <h2 class="section-title">Rigging & Animation</h2>
                 <div class="cards-container">
 
-                    <div class="card" data-tags="vast-ai rigging animation">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Tripo Rigging">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-unirig.png" alt="ComfyUI-UniRig">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-Tripo</div>
-                            <div class="card-author">by VAST-AI-Research</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-UniRig</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 231</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">PozzettiAndrea</span> · <span class="model-author">SIGGRAPH 2025</span>
+                            </div>
+                            <div class="card-tags">
+                                <span class="tag tag-io">rigging</span>
+                            </div>
+                            <div class="card-description">ML-based skeleton extraction and skinning for any 3D mesh (humans, animals, objects) with pose manipulation and FBX/GLB export.</div>
+                            <div class="card-links">
+                                <a href="https://github.com/PozzettiAndrea/ComfyUI-UniRig" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="vast-ai">
+                        <img src="assets/img/comfyui-tripo.png" alt="ComfyUI-Tripo">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-Tripo</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 315</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">VAST-AI-Research</span> · <span class="model-author">VAST-AI</span>
+                            </div>
                             <div class="card-tags">
                                 <span class="tag tag-creator">vast-ai</span>
                                 <span class="tag tag-io">rigging</span>
                                 <span class="tag tag-io">animation</span>
                             </div>
-                            <div class="card-description">UniRig auto-rigging and animation retargeting via Tripo API</div>
+                            <div class="card-description">Tripo API for skeleton rigging and animation retargeting on generated 3D models.</div>
                             <div class="card-links">
-                                <a href="https://github.com/VAST-AI-Research/ComfyUI-Tripo">GitHub</a>
+                                <a href="https://github.com/VAST-AI-Research/ComfyUI-Tripo" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="community rigging animation">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-mesh2motion">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-unirig.png" alt="ComfyUI-mesh2motion">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-mesh2motion</div>
-                            <div class="card-author">by jtydhr88</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-mesh2motion</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 35</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">jtydhr88</span> · <span class="model-author">Mesh2Motion</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-io">rigging</span>
                                 <span class="tag tag-io">animation</span>
                             </div>
-                            <div class="card-description">Mesh to rigged animation workflows</div>
+                            <div class="card-description">Full Mesh2Motion editor with skeleton fitting, weight painting for humanoid/quadruped/bird/dragon, and animation library with GLB export.</div>
                             <div class="card-links">
-                                <a href="https://github.com/jtydhr88/ComfyUI-mesh2motion">GitHub</a>
+                                <a href="https://github.com/jtydhr88/ComfyUI-mesh2motion" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
@@ -777,35 +1095,64 @@
                 <h2 class="section-title">Depth & Normal</h2>
                 <div class="cards-container">
 
-                    <div class="card" data-tags="community depth">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Marigold">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-depthanythingv3.png" alt="ComfyUI-DepthAnythingV3">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-Marigold</div>
-                            <div class="card-author">by Kijai</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-DepthAnythingV3</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 210</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">PozzettiAndrea</span> · <span class="model-author">DepthAnything</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-io">depth</span>
                             </div>
-                            <div class="card-description">Marigold diffusion-based depth and normal estimation</div>
+                            <div class="card-description">DepthAnything V3 model support for state-of-the-art monocular depth estimation.</div>
                             <div class="card-links">
-                                <a href="https://github.com/kijai/ComfyUI-Marigold">GitHub</a>
+                                <a href="https://github.com/PozzettiAndrea/ComfyUI-DepthAnythingV3" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="community depth normal">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack Depth">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-marigold.png" alt="ComfyUI-Marigold">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-3D-Pack</div>
-                            <div class="card-author">by MrForExample</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-Marigold</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 557</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">Kijai</span> · <span class="model-author">ETH Zurich</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-io">depth</span>
                                 <span class="tag tag-io">normal</span>
                             </div>
-                            <div class="card-description">Depth and normal map preprocessing for 3D reconstruction</div>
+                            <div class="card-description">Diffusion-based depth and normal estimation with ensemble iterations, fp16 support, and OpenEXR export for VFX/3D software.</div>
                             <div class="card-links">
-                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                                <a href="https://github.com/kijai/ComfyUI-Marigold" target="_blank">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-3d-pack.jpg" alt="ComfyUI-3D-Pack">
+                        <div class="card-content">
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-3D-Pack</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 3.5k</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">MrForExample</span> · <span class="model-author">Multiple models</span>
+                            </div>
+                            <div class="card-tags">
+                                <span class="tag tag-io">depth</span>
+                                <span class="tag tag-io">normal</span>
+                            </div>
+                            <div class="card-description">Depth and normal map preprocessing for 3D reconstruction workflows.</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
@@ -818,34 +1165,42 @@
                 <h2 class="section-title">Visualization</h2>
                 <div class="cards-container">
 
-                    <div class="card" data-tags="community viewer">
-                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack Viewer">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-3d-pack.jpg" alt="ComfyUI-3D-Pack">
                         <div class="card-content">
-                            <div class="card-title">ComfyUI-3D-Pack</div>
-                            <div class="card-author">by MrForExample</div>
+                            <div class="card-header">
+                                <div class="card-title">ComfyUI-3D-Pack</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 3.5k</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">MrForExample</span> · <span class="model-author">Multiple models</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-io">viewer</span>
                             </div>
-                            <div class="card-description">3D mesh viewer with orbit camera controls</div>
+                            <div class="card-description">Built-in 3D mesh and Gaussian viewer with orbit camera for previewing generated assets within ComfyUI.</div>
                             <div class="card-links">
-                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card" data-tags="community blender">
-                        <img src="assets/img/placeholder.svg" alt="comfyUI-blender-wrapper">
+                    <div class="card" data-tags="community">
+                        <img src="assets/img/comfyui-3d-pack.jpg" alt="comfyUI-blender-wrapper">
                         <div class="card-content">
-                            <div class="card-title">comfyUI-blender-wrapper</div>
-                            <div class="card-author">by IRCSS</div>
+                            <div class="card-header">
+                                <div class="card-title">comfyUI-blender-wrapper</div>
+                                <div class="card-stars"><i class="fas fa-star"></i> 5</div>
+                            </div>
+                            <div class="card-authors">
+                                <span class="node-author">IRCSS</span> · <span class="model-author">Blender</span>
+                            </div>
                             <div class="card-tags">
-                                <span class="tag tag-creator">community</span>
                                 <span class="tag tag-io">blender</span>
                             </div>
-                            <div class="card-description">Blender integration for rendering and scene manipulation</div>
+                            <div class="card-description">Generic Blender integration for headless execution of asset pipeline tasks like cleanup, unwrapping, baking, and rigging.</div>
                             <div class="card-links">
-                                <a href="https://github.com/IRCSS/comfyUI-blender-wrapper">GitHub</a>
+                                <a href="https://github.com/IRCSS/comfyUI-blender-wrapper" target="_blank">GitHub</a>
                             </div>
                         </div>
                     </div>
