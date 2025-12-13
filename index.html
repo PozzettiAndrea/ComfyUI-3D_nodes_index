@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Awesome ComfyUI 3D</title>
+    <meta name="description" content="A curated index of ComfyUI 3D nodes for mesh generation, texturing, Gaussian splatting, rigging, and more.">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1520px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin: 40px 0;
+            width: 100%;
+        }
+
+        .section-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-left: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            width: 100%;
+            grid-auto-flow: row;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .card:hover {
+            transform: scale(1.03);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .card-content {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .card-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .card-author {
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        .card-description {
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 10px;
+            flex-grow: 1;
+        }
+
+        .card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .tag {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .tag-creator { background: #e3f2fd; color: #1565c0; }
+        .tag-model { background: #e8f5e9; color: #2e7d32; }
+        .tag-io { background: #fff3e0; color: #e65100; }
+        .tag-format { background: #f3e5f5; color: #7b1fa2; }
+
+        .card-links {
+            margin-top: auto;
+        }
+
+        .card-links a {
+            display: inline-block;
+            margin-right: 10px;
+            color: #0366d6;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+
+        .card-links a:hover {
+            text-decoration: underline;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 15px;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            min-width: 180px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .sidebar-section {
+            margin-bottom: 15px;
+        }
+
+        .sidebar-section-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav-menu li {
+            margin: 5px 0;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            color: #333;
+            padding: 6px 8px;
+            font-size: 14px;
+            display: block;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-menu a:hover {
+            background: #e9ecef;
+            color: #007bff;
+        }
+
+        /* Filter Controls */
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .filter-checkbox { display: none; }
+
+        .filter-label {
+            padding: 4px 10px;
+            border-radius: 14px;
+            cursor: pointer;
+            background: #e9ecef;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .filter-label:hover {
+            background: #dee2e6;
+        }
+
+        .filter-checkbox:checked + .filter-label {
+            background: #2196f3;
+            color: white;
+        }
+
+        /* CSS-only filtering using :has() */
+        body:has(#filter-tencent:checked) .card:not([data-tags*="tencent"]) { display: none; }
+        body:has(#filter-vast-ai:checked) .card:not([data-tags*="vast-ai"]) { display: none; }
+        body:has(#filter-microsoft:checked) .card:not([data-tags*="microsoft"]) { display: none; }
+        body:has(#filter-stability:checked) .card:not([data-tags*="stability"]) { display: none; }
+        body:has(#filter-community:checked) .card:not([data-tags*="community"]) { display: none; }
+
+        .content {
+            flex: 1;
+            min-width: 0;
+            padding-right: 20px;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .nav-menu a.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .github-button {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+            background-color: #414141;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-left: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .github-button:hover {
+            background-color: #000000;
+        }
+
+        .github-button i {
+            font-size: 20px;
+            margin-right: 8px;
+        }
+
+        .github-button span {
+            font-weight: 500;
+        }
+
+        .title-link {
+            text-decoration: none;
+        }
+
+        h1 {
+            position: relative;
+            color: #4f4f4f;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 3px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        h1:hover::after {
+            width: 100%;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                position: static;
+                min-width: auto;
+                width: 100%;
+            }
+
+            .cards-container {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                padding: 10px;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="header">
+        <a href="https://github.com/your-username/ComfyUI-3D_nodes_index" class="title-link">
+            <h1>Awesome ComfyUI 3D</h1>
+        </a>
+
+        <p class="subtitle">
+            A curated index of ComfyUI custom nodes for 3D generation, processing, and visualization.
+        </p>
+        <a href="https://github.com/your-username/ComfyUI-3D_nodes_index" class="github-button" target="_blank">
+            <i class="fab fa-github"></i>
+            <span>View on GitHub</span>
+        </a>
+    </div>
+
+
+    <div class="main-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Categories</div>
+                <ul class="nav-menu">
+                    <li><a href="#image-to-3d">Image-to-3D</a></li>
+                    <li><a href="#text-to-3d">Text-to-3D</a></li>
+                    <li><a href="#multi-view">Multi-View</a></li>
+                    <li><a href="#mesh-processing">Mesh Processing</a></li>
+                    <li><a href="#texturing">Texturing</a></li>
+                    <li><a href="#gaussian-splatting">Gaussian Splatting</a></li>
+                    <li><a href="#rigging">Rigging & Animation</a></li>
+                    <li><a href="#depth-normal">Depth & Normal</a></li>
+                    <li><a href="#visualization">Visualization</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Filter by Creator</div>
+                <div class="filters">
+                    <input type="checkbox" id="filter-tencent" class="filter-checkbox">
+                    <label for="filter-tencent" class="filter-label">Tencent</label>
+
+                    <input type="checkbox" id="filter-vast-ai" class="filter-checkbox">
+                    <label for="filter-vast-ai" class="filter-label">VAST-AI</label>
+
+                    <input type="checkbox" id="filter-microsoft" class="filter-checkbox">
+                    <label for="filter-microsoft" class="filter-label">Microsoft</label>
+
+                    <input type="checkbox" id="filter-stability" class="filter-checkbox">
+                    <label for="filter-stability" class="filter-label">Stability</label>
+
+                    <input type="checkbox" id="filter-community" class="filter-checkbox">
+                    <label for="filter-community" class="filter-label">Community</label>
+                </div>
+            </div>
+        </nav>
+
+        <div class="content">
+
+            <!-- Image-to-3D Section -->
+            <div id="image-to-3d" class="section">
+                <h2 class="section-title">Image-to-3D</h2>
+                <div class="cards-container">
+
+                    <div class="card" data-tags="community image-to-3d glb">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-3D-Pack</div>
+                            <div class="card-author">by MrForExample</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">image-to-3d</span>
+                                <span class="tag tag-format">glb</span>
+                            </div>
+                            <div class="card-description">Comprehensive suite: TripoSR, InstantMesh, CRM, LGM, Era3D, Wonder3D, Unique3D, StableFast3D, 3DGS, NeRF</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="tencent hunyuan3d image-to-3d">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Hunyuan3DWrapper">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-Hunyuan3DWrapper</div>
+                            <div class="card-author">by Kijai</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">tencent</span>
+                                <span class="tag tag-model">hunyuan3d</span>
+                                <span class="tag tag-io">image-to-3d</span>
+                            </div>
+                            <div class="card-description">Hunyuan3D 2.0 wrapper for high-quality image-to-3D mesh generation</div>
+                            <div class="card-links">
+                                <a href="https://github.com/kijai/ComfyUI-Hunyuan3DWrapper">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="tencent hunyuan3d image-to-3d">
+                        <img src="assets/img/placeholder.svg" alt="Comfyui_Hunyuan3D_EX">
+                        <div class="card-content">
+                            <div class="card-title">Comfyui_Hunyuan3D_EX</div>
+                            <div class="card-author">by BIMer-99</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">tencent</span>
+                                <span class="tag tag-model">hunyuan3d</span>
+                            </div>
+                            <div class="card-description">Simplified Hunyuan3D wrapper with streamlined workflow</div>
+                            <div class="card-links">
+                                <a href="https://github.com/BIMer-99/Comfyui_Hunyuan3D_EX">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="stability triposr image-to-3d">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Flowty-TripoSR">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-Flowty-TripoSR</div>
+                            <div class="card-author">by flowtyone</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">stability</span>
+                                <span class="tag tag-model">triposr</span>
+                                <span class="tag tag-io">image-to-3d</span>
+                            </div>
+                            <div class="card-description">Standalone TripoSR implementation for fast image-to-3D</div>
+                            <div class="card-links">
+                                <a href="https://github.com/flowtyone/ComfyUI-Flowty-TripoSR">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community crm image-to-3d">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Flowty-CRM">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-Flowty-CRM</div>
+                            <div class="card-author">by flowtyone</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-model">crm</span>
+                                <span class="tag tag-io">image-to-3d</span>
+                            </div>
+                            <div class="card-description">Convolutional Reconstruction Model for image-to-3D</div>
+                            <div class="card-links">
+                                <a href="https://github.com/flowtyone/ComfyUI-Flowty-CRM">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="vast-ai triposg image-to-3d gaussian">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-TripoSG">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-TripoSG</div>
+                            <div class="card-author">by fredconex</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">vast-ai</span>
+                                <span class="tag tag-model">triposg</span>
+                                <span class="tag tag-format">gaussian</span>
+                            </div>
+                            <div class="card-description">TripoSG (Tripo Stable Gaussian) for high-quality 3D generation</div>
+                            <div class="card-links">
+                                <a href="https://github.com/fredconex/ComfyUI-TripoSG">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="microsoft trellis image-to-3d">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI_TRELLIS">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI_TRELLIS</div>
+                            <div class="card-author">by smthemex</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">microsoft</span>
+                                <span class="tag tag-model">trellis</span>
+                                <span class="tag tag-io">image-to-3d</span>
+                            </div>
+                            <div class="card-description">Microsoft TRELLIS for structured latent 3D generation</div>
+                            <div class="card-links">
+                                <a href="https://github.com/smthemex/ComfyUI_TRELLIS">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="microsoft trellis image-to-3d">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-IF_Trellis">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-IF_Trellis</div>
+                            <div class="card-author">by if-ai</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">microsoft</span>
+                                <span class="tag tag-model">trellis</span>
+                            </div>
+                            <div class="card-description">Alternative TRELLIS wrapper with additional features</div>
+                            <div class="card-links">
+                                <a href="https://github.com/if-ai/ComfyUI-IF_Trellis">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Text-to-3D Section -->
+            <div id="text-to-3d" class="section">
+                <h2 class="section-title">Text-to-3D</h2>
+                <div class="cards-container">
+
+                    <div class="card" data-tags="vast-ai text-to-3d api">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Tripo">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-Tripo</div>
+                            <div class="card-author">by VAST-AI-Research</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">vast-ai</span>
+                                <span class="tag tag-io">text-to-3d</span>
+                                <span class="tag tag-model">api</span>
+                            </div>
+                            <div class="card-description">Official Tripo API integration for text/image-to-3D with rigging support</div>
+                            <div class="card-links">
+                                <a href="https://github.com/VAST-AI-Research/ComfyUI-Tripo">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community text-to-3d">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-3D-Pack</div>
+                            <div class="card-author">by MrForExample</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">text-to-3d</span>
+                            </div>
+                            <div class="card-description">Text-to-3D via Score Distillation Sampling (SDS) with various models</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Multi-View Section -->
+            <div id="multi-view" class="section">
+                <h2 class="section-title">Multi-View Generation</h2>
+                <div class="cards-container">
+
+                    <div class="card" data-tags="community multi-view">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack Multi-View">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-3D-Pack</div>
+                            <div class="card-author">by MrForExample</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">multi-view</span>
+                            </div>
+                            <div class="card-description">Zero123++, Era3D, Wonder3D, SV3D for consistent multi-view image generation</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="tencent multi-view hunyuan3d">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Hunyuan3DWrapper Multi-View">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-Hunyuan3DWrapper</div>
+                            <div class="card-author">by Kijai</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">tencent</span>
+                                <span class="tag tag-io">multi-view</span>
+                                <span class="tag tag-model">hunyuan3d</span>
+                            </div>
+                            <div class="card-description">Hunyuan3D multi-view diffusion for consistent view synthesis</div>
+                            <div class="card-links">
+                                <a href="https://github.com/kijai/ComfyUI-Hunyuan3DWrapper">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Mesh Processing Section -->
+            <div id="mesh-processing" class="section">
+                <h2 class="section-title">Mesh Processing</h2>
+                <div class="cards-container">
+
+                    <div class="card" data-tags="community mesh-processing">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-GeometryPack">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-GeometryPack</div>
+                            <div class="card-author">by MeshArt3D</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">mesh-processing</span>
+                            </div>
+                            <div class="card-description">Remesh, boolean operations, UV unwrap, mesh simplification, and more</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MeshArt3D/ComfyUI-GeometryPack">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community mesh-processing">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack Mesh">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-3D-Pack</div>
+                            <div class="card-author">by MrForExample</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">mesh-processing</span>
+                            </div>
+                            <div class="card-description">Basic mesh operations, format conversion, and preprocessing</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Texturing Section -->
+            <div id="texturing" class="section">
+                <h2 class="section-title">Texturing</h2>
+                <div class="cards-container">
+
+                    <div class="card" data-tags="community texturing">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Paint3D-Nodes">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-Paint3D-Nodes</div>
+                            <div class="card-author">by N3rd00d</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">texturing</span>
+                            </div>
+                            <div class="card-description">Texture inpainting and generation for 3D meshes</div>
+                            <div class="card-links">
+                                <a href="https://github.com/N3rd00d/ComfyUI-Paint3D-Nodes">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community texturing">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack Texturing">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-3D-Pack</div>
+                            <div class="card-author">by MrForExample</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">texturing</span>
+                            </div>
+                            <div class="card-description">UV texture baking and material assignment</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Gaussian Splatting Section -->
+            <div id="gaussian-splatting" class="section">
+                <h2 class="section-title">Gaussian Splatting</h2>
+                <div class="cards-container">
+
+                    <div class="card" data-tags="community gaussian">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack 3DGS">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-3D-Pack</div>
+                            <div class="card-author">by MrForExample</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-format">gaussian</span>
+                            </div>
+                            <div class="card-description">3D Gaussian Splatting training and rendering</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="vast-ai gaussian triposg">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-TripoSG Gaussian">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-TripoSG</div>
+                            <div class="card-author">by fredconex</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">vast-ai</span>
+                                <span class="tag tag-format">gaussian</span>
+                                <span class="tag tag-model">triposg</span>
+                            </div>
+                            <div class="card-description">Tripo Stable Gaussian for high-quality Gaussian output</div>
+                            <div class="card-links">
+                                <a href="https://github.com/fredconex/ComfyUI-TripoSG">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="microsoft gaussian trellis">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI_TRELLIS Gaussian">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI_TRELLIS</div>
+                            <div class="card-author">by smthemex</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">microsoft</span>
+                                <span class="tag tag-format">gaussian</span>
+                                <span class="tag tag-model">trellis</span>
+                            </div>
+                            <div class="card-description">SLAT representation with Gaussian Splatting output</div>
+                            <div class="card-links">
+                                <a href="https://github.com/smthemex/ComfyUI_TRELLIS">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Rigging & Animation Section -->
+            <div id="rigging" class="section">
+                <h2 class="section-title">Rigging & Animation</h2>
+                <div class="cards-container">
+
+                    <div class="card" data-tags="vast-ai rigging animation">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Tripo Rigging">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-Tripo</div>
+                            <div class="card-author">by VAST-AI-Research</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">vast-ai</span>
+                                <span class="tag tag-io">rigging</span>
+                                <span class="tag tag-io">animation</span>
+                            </div>
+                            <div class="card-description">UniRig auto-rigging and animation retargeting via Tripo API</div>
+                            <div class="card-links">
+                                <a href="https://github.com/VAST-AI-Research/ComfyUI-Tripo">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community rigging animation">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-mesh2motion">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-mesh2motion</div>
+                            <div class="card-author">by jtydhr88</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">rigging</span>
+                                <span class="tag tag-io">animation</span>
+                            </div>
+                            <div class="card-description">Mesh to rigged animation workflows</div>
+                            <div class="card-links">
+                                <a href="https://github.com/jtydhr88/ComfyUI-mesh2motion">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Depth & Normal Section -->
+            <div id="depth-normal" class="section">
+                <h2 class="section-title">Depth & Normal</h2>
+                <div class="cards-container">
+
+                    <div class="card" data-tags="community depth">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-Marigold">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-Marigold</div>
+                            <div class="card-author">by Kijai</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">depth</span>
+                            </div>
+                            <div class="card-description">Marigold diffusion-based depth and normal estimation</div>
+                            <div class="card-links">
+                                <a href="https://github.com/kijai/ComfyUI-Marigold">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community depth normal">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack Depth">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-3D-Pack</div>
+                            <div class="card-author">by MrForExample</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">depth</span>
+                                <span class="tag tag-io">normal</span>
+                            </div>
+                            <div class="card-description">Depth and normal map preprocessing for 3D reconstruction</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Visualization Section -->
+            <div id="visualization" class="section">
+                <h2 class="section-title">Visualization</h2>
+                <div class="cards-container">
+
+                    <div class="card" data-tags="community viewer">
+                        <img src="assets/img/placeholder.svg" alt="ComfyUI-3D-Pack Viewer">
+                        <div class="card-content">
+                            <div class="card-title">ComfyUI-3D-Pack</div>
+                            <div class="card-author">by MrForExample</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">viewer</span>
+                            </div>
+                            <div class="card-description">3D mesh viewer with orbit camera controls</div>
+                            <div class="card-links">
+                                <a href="https://github.com/MrForExample/ComfyUI-3D-Pack">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-tags="community blender">
+                        <img src="assets/img/placeholder.svg" alt="comfyUI-blender-wrapper">
+                        <div class="card-content">
+                            <div class="card-title">comfyUI-blender-wrapper</div>
+                            <div class="card-author">by IRCSS</div>
+                            <div class="card-tags">
+                                <span class="tag tag-creator">community</span>
+                                <span class="tag tag-io">blender</span>
+                            </div>
+                            <div class="card-description">Blender integration for rendering and scene manipulation</div>
+                            <div class="card-links">
+                                <a href="https://github.com/IRCSS/comfyUI-blender-wrapper">GitHub</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+
+</html>

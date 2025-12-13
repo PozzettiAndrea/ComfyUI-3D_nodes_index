@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 180" width="400" height="180">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="180" fill="url(#bg)"/>
+  <g transform="translate(200, 90)">
+    <!-- 3D Cube icon -->
+    <polygon points="0,-35 30,-17 30,17 0,35 -30,17 -30,-17" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2"/>
+    <line x1="0" y1="-35" x2="0" y2="0" stroke="rgba(255,255,255,0.8)" stroke-width="2"/>
+    <line x1="30" y1="-17" x2="0" y2="0" stroke="rgba(255,255,255,0.8)" stroke-width="2"/>
+    <line x1="-30" y1="-17" x2="0" y2="0" stroke="rgba(255,255,255,0.8)" stroke-width="2"/>
+  </g>
+  <text x="200" y="155" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-family="Arial, sans-serif" font-size="12">ComfyUI 3D Node</text>
+</svg>
