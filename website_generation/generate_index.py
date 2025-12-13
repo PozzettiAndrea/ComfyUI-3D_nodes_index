@@ -318,6 +318,9 @@ def is_media_url(url):
     # GitHub user-attachments (no extension, but are images)
     if 'github.com/user-attachments/assets/' in url_lower:
         return True
+    # GitHub repo assets (format: github.com/{owner}/{repo}/assets/{user_id}/{uuid})
+    if re.search(r'github\.com/[^/]+/[^/]+/assets/\d+/', url_lower):
+        return True
     return False
 
 def fetch_repo_media(owner, repo, branch):
