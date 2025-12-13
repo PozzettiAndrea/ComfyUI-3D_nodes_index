@@ -346,11 +346,12 @@ def detect_media_type(url):
     if any(url_lower.endswith(ext) for ext in IMAGE_EXTS):
         return 'image'
 
-    # For extensionless URLs (like GitHub user-attachments), check Content-Type
+    # For extensionless URLs (like GitHub user-attachments), check Content-Type via GET request
+    # Note: GitHub blocks HEAD requests with 403, so we must use GET and close immediately
     if 'user-attachments/assets/' in url or re.search(r'/assets/\d+/', url):
         try:
-            req = Request(url, method='HEAD', headers={"User-Agent": "ComfyUI-3D-Index"})
-            with urlopen(req, timeout=5) as resp:
+            req = Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+            with urlopen(req, timeout=10) as resp:
                 content_type = resp.headers.get('Content-Type', '').lower()
                 if 'video' in content_type:
                     return 'video'
