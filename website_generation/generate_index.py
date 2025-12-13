@@ -412,8 +412,10 @@ def generate_media_gallery(media_urls):
 
 def generate_card(node, media_urls, node_defs, updated_at):
     """Generate HTML for a single card"""
-    name = node["name"]
     github_url = node["github_url"]
+    # Use repo name from URL instead of package title
+    _, repo_name = extract_github_info(github_url)
+    name = repo_name or node["name"]
     stars_raw = node["stars"]
     stars = format_stars(stars_raw)
     node_author = node["node_author"]
@@ -444,7 +446,7 @@ def generate_card(node, media_urls, node_defs, updated_at):
         updated_display = updated_at[:10]  # Just the date part
 
     return f'''
-                    <div class="card" data-tags="{data_tag}" data-nodes='{node_data}' data-stars="{stars_raw}" data-updated="{updated_at}">
+                    <div class="card" data-tags="{data_tag}" data-nodes='{node_data}' data-stars="{stars_raw}" data-updated="{updated_at}" data-category="{category}">
                         <div class="card-media" {fallback_style}>
                             {gallery_html if media_urls else ""}
                         </div>
@@ -468,32 +470,23 @@ def generate_card(node, media_urls, node_defs, updated_at):
                         </div>
                     </div>'''
 
-def generate_section(category_id, category_name, nodes_with_media, node_defs):
-    """Generate HTML for a category section"""
-    cards = "\n".join(generate_card(node, media, node_defs, updated) for node, media, updated in nodes_with_media)
-    return f'''
-            <!-- {category_name} Section -->
-            <div id="{category_id}" class="section">
-                <h2 class="section-title">{category_name}</h2>
-                <div class="cards-container">
-{cards}
-                </div>
-            </div>
-'''
-
-def generate_html(nodes_by_category_with_media, node_defs):
+def generate_html(all_nodes_with_media, node_defs):
     """Generate complete HTML page with client-side node rendering."""
 
-    nav_links = "\n                    ".join(
-        f'<a href="#{cat_id}">{cat_name}</a>'
-        for cat_id, cat_name in CATEGORIES.items()
-        if cat_id in nodes_by_category_with_media
-    )
+    # Collect all unique categories
+    categories_in_use = set()
+    for node, media, updated in all_nodes_with_media:
+        categories_in_use.add(node.get("category", "other-3d"))
 
-    sections = ""
+    # Generate filter buttons
+    filter_buttons = '<button class="filter-btn active" onclick="filterCards(\'all\')">All</button>\n'
     for cat_id, cat_name in CATEGORIES.items():
-        if cat_id in nodes_by_category_with_media:
-            sections += generate_section(cat_id, cat_name, nodes_by_category_with_media[cat_id], node_defs)
+        if cat_id in categories_in_use:
+            filter_buttons += f'                        <button class="filter-btn" onclick="filterCards(\'{cat_id}\')">{cat_name}</button>\n'
+
+    # Generate all cards in one grid (sorted by stars)
+    sorted_nodes = sorted(all_nodes_with_media, key=lambda x: int(x[0]["stars"]) if x[0]["stars"].isdigit() else 0, reverse=True)
+    all_cards = "\n".join(generate_card(node, media, node_defs, updated) for node, media, updated in sorted_nodes)
 
     return f'''<!DOCTYPE html>
 <html lang="en">
@@ -747,6 +740,33 @@ def generate_html(nodes_by_category_with_media, node_defs):
             border-color: #3498db;
         }}
 
+        .filter-controls {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }}
+
+        .filter-btn {{
+            padding: 6px 14px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }}
+
+        .filter-btn:hover {{
+            border-color: #3498db;
+            color: #3498db;
+        }}
+
+        .filter-btn.active {{
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }}
+
         /* Modal for node viewer */
         .modal {{
             display: none;
@@ -892,7 +912,9 @@ def generate_html(nodes_by_category_with_media, node_defs):
     <main>
         <nav>
             <div class="nav-links">
-                    {nav_links}
+                <div class="filter-controls">
+                    {filter_buttons}
+                </div>
                 <div class="sort-controls">
                     <label>Sort by:</label>
                     <button class="sort-btn active" onclick="sortCards('stars')">Stars</button>
@@ -902,7 +924,9 @@ def generate_html(nodes_by_category_with_media, node_defs):
         </nav>
 
         <div class="content">
-{sections}
+            <div class="cards-container">
+{all_cards}
+            </div>
         </div>
     </main>
 
@@ -1042,7 +1066,7 @@ def generate_html(nodes_by_category_with_media, node_defs):
             document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
 
-            // Sort each section's cards
+            // Sort cards
             document.querySelectorAll('.cards-container').forEach(container => {{
                 const cards = Array.from(container.querySelectorAll('.card'));
 
@@ -1061,6 +1085,22 @@ def generate_html(nodes_by_category_with_media, node_defs):
 
                 // Re-append in sorted order
                 cards.forEach(card => container.appendChild(card));
+            }});
+        }}
+
+        // Category filtering
+        function filterCards(category) {{
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Show/hide cards based on category
+            document.querySelectorAll('.card').forEach(card => {{
+                if (category === 'all' || card.dataset.category === category) {{
+                    card.style.display = '';
+                }} else {{
+                    card.style.display = 'none';
+                }}
             }});
         }}
     </script>
@@ -1132,16 +1172,15 @@ def main():
                     media_by_url[github_url] = ([], "")
                 pbar.update(1)
 
-    # Build final structure
-    nodes_by_category_with_media = defaultdict(list)
-    for category, nodes in nodes_by_category.items():
-        for node in nodes:
-            media, updated_at = media_by_url.get(node["github_url"], ([], ""))
-            nodes_by_category_with_media[category].append((node, media, updated_at))
+    # Build final structure (flat list)
+    all_nodes_with_media = []
+    for node in all_nodes:
+        media, updated_at = media_by_url.get(node["github_url"], ([], ""))
+        all_nodes_with_media.append((node, media, updated_at))
 
     # Generate HTML
     print("\nGenerating HTML...")
-    html = generate_html(nodes_by_category_with_media, node_defs)
+    html = generate_html(all_nodes_with_media, node_defs)
 
     Path(OUTPUT_FILE).write_text(html)
     print(f"Generated {OUTPUT_FILE}")
