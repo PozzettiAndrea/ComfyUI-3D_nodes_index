@@ -1,0 +1,28 @@
+You are analyzing ComfyUI custom node packages to identify 3D-related tools.
+
+TASK: Analyze the README and provide structured information about this package.
+
+3D-RELEVANT if it involves:
+- 3D model generation (image-to-3D, text-to-3D)
+- Mesh processing (OBJ/GLB/FBX import/export, remeshing, UV)
+- Multi-view generation (Zero123, SV3D, Era3D)
+- Gaussian Splatting (3DGS, NeRF)
+- Depth/normal estimation
+- Point clouds, texturing, CAD formats
+- Rigging & animation, 3D human reconstruction
+- Voxels, SDF, neural 3D representations
+
+NOT 3D-RELEVANT: Pure 2D image processing, video, audio, text/LLM, workflow utilities.
+
+OUTPUT JSON only:
+{
+  "relevant": true/false,
+  "confidence": "high/medium/low",
+  "category": "image-to-3d|text-to-3d|multi-view|mesh-processing|texturing|gaussian-splatting|rigging-animation|depth-normal|visualization|cad|human-body|other-3d",
+  "model_author": "Organization or researcher name if this wraps a specific model/paper, else empty string",
+  "description": "1-2 sentence summary of what this package does for 3D workflows",
+  "nodes_list": "Key node names, comma-separated (max 5)"
+}
+
+For model_author: Look for references to papers, models, or organizations (e.g., "Tencent Hunyuan3D", "Meta SAM", "Stability AI TripoSR").
+When uncertain about relevance, include with confidence "low".

@@ -117,6 +117,40 @@
 
 ---
 
+## How This List Was Created
+
+This index is built using an automated discovery pipeline:
+
+### 1. Fetch All ComfyUI Nodes
+```bash
+python fetch_all_nodes.py
+```
+- Pulls ~3700 nodes from [ComfyUI-Manager's custom-node-list.json](https://github.com/ltdrdata/ComfyUI-Manager)
+- Fetches README.md for each repo via raw.githubusercontent.com
+- Outputs `all_comfyui_nodes.csv`
+
+### 2. Filter for 3D Relevance
+```bash
+python filter_3d_nodes.py
+```
+- Uses DeepSeek via OpenRouter to classify each node
+- Prompt in `deepseek_prompt.txt` defines 3D criteria
+- Outputs `3d_nodes.csv` with relevant nodes only
+
+### Classification Criteria
+Nodes are included if they involve:
+- 3D generation (image-to-3D, text-to-3D)
+- Mesh processing (OBJ/GLB/FBX import/export, remeshing)
+- Multi-view generation (Zero123, SV3D)
+- Gaussian Splatting / NeRF
+- Depth & normal estimation
+- Texturing, UV baking, PBR
+- CAD formats (STEP, IGES)
+- Rigging & animation
+- 3D human/body reconstruction
+
+---
+
 ## Contributing
 
 Contributions welcome! Please submit a PR to add new packages or update existing entries.

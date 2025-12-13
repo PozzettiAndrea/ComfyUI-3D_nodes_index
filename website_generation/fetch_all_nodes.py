@@ -5,12 +5,16 @@ Fetch all ComfyUI nodes from ComfyUI-Manager and their READMEs into a CSV.
 import csv
 import json
 import re
+from datetime import datetime
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 
-OUTPUT_FILE = "all_comfyui_nodes.csv"
+DATE_TAG = datetime.now().strftime("%Y-%m-%d")
+OUTPUT_FILE = f"all_comfyui_nodes_{DATE_TAG}.csv"
 MANAGER_URL = "https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/custom-node-list.json"
+STATS_URL = "https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/github-stats.json"
 MAX_WORKERS = 50  # Can go higher since it's just HTTP
 
 def fetch_manager_nodes():
@@ -22,6 +26,13 @@ def fetch_manager_nodes():
     nodes = data.get("custom_nodes", [])
     print(f"Found {len(nodes)} nodes")
     return nodes
+
+def fetch_github_stats():
+    """Fetch star counts from github-stats.json."""
+    print("Fetching GitHub stats...")
+    req = Request(STATS_URL)
+    with urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read())
 
 def extract_github_info(node):
     """Extract GitHub owner/repo from node data."""
@@ -45,15 +56,16 @@ def fetch_readme(owner, repo):
 
 def process_node(args):
     """Process a single node - fetch its README."""
-    idx, node, owner, repo = args
+    idx, node, owner, repo, stars = args
     readme = fetch_readme(owner, repo)
     name = node.get("title") or node.get("name") or repo
     desc = node.get("description", "")[:500]
     github_url = f"https://github.com/{owner}/{repo}"
-    return (idx, [name, github_url, owner, desc, readme])
+    return (idx, [name, github_url, stars, owner, desc, readme])
 
 def main():
     nodes = fetch_manager_nodes()
+    stats = fetch_github_stats()
 
     # Deduplicate by GitHub repo
     seen_repos = set()
@@ -65,33 +77,32 @@ def main():
             key = f"{owner}/{repo}".lower()
             if key not in seen_repos:
                 seen_repos.add(key)
-                unique_nodes.append((node, owner, repo))
+                github_url = f"https://github.com/{owner}/{repo}"
+                stars = stats.get(github_url, {}).get("stars", 0)
+                unique_nodes.append((node, owner, repo, stars))
 
     total = len(unique_nodes)
     print(f"Unique GitHub repos: {total}")
-    print(f"Fetching READMEs with {MAX_WORKERS} parallel workers...")
 
     # Prepare work items
-    work_items = [(i, node, owner, repo) for i, (node, owner, repo) in enumerate(unique_nodes)]
+    work_items = [(i, node, owner, repo, stars) for i, (node, owner, repo, stars) in enumerate(unique_nodes)]
 
     # Process in parallel
     results = [None] * total
-    completed = 0
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {executor.submit(process_node, item): item[0] for item in work_items}
 
-        for future in as_completed(futures):
-            idx, row = future.result()
-            results[idx] = row
-            completed += 1
-            if completed % 100 == 0 or completed == total:
-                print(f"Progress: {completed}/{total}")
+        with tqdm(total=total, desc="Fetching READMEs", unit="repo") as pbar:
+            for future in as_completed(futures):
+                idx, row = future.result()
+                results[idx] = row
+                pbar.update(1)
 
     # Write CSV
     with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["name", "github_url", "author", "description", "readme"])
+        writer.writerow(["name", "github_url", "stars", "author", "description", "readme"])
         for row in results:
             if row:
                 writer.writerow(row)
