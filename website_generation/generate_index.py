@@ -301,9 +301,16 @@ def extract_media_from_readme(readme_content, owner, repo, branch):
     return [url for url in media if url and is_media_url(url)]
 
 def normalize_url(url, owner, repo, branch):
-    """Convert relative URLs to absolute GitHub raw URLs."""
+    """Convert relative URLs and GitHub blob URLs to raw URLs."""
     if not url:
         return ""
+
+    # Convert GitHub blob URLs to raw URLs
+    # https://github.com/owner/repo/blob/branch/path -> https://raw.githubusercontent.com/owner/repo/branch/path
+    blob_match = re.match(r'https?://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)', url)
+    if blob_match:
+        return f"https://raw.githubusercontent.com/{blob_match.group(1)}/{blob_match.group(2)}/{blob_match.group(3)}/{blob_match.group(4)}"
+
     if url.startswith(('http://', 'https://')):
         return url
     url = url.lstrip('./')
@@ -315,13 +322,36 @@ def is_media_url(url):
     # Check file extensions
     if any(url_lower.endswith(ext) for ext in MEDIA_EXTS):
         return True
-    # GitHub user-attachments (no extension, but are images)
+    # GitHub user-attachments (no extension, but can be images or videos)
     if 'github.com/user-attachments/assets/' in url_lower:
         return True
     # GitHub repo assets (format: github.com/{owner}/{repo}/assets/{user_id}/{uuid})
     if re.search(r'github\.com/[^/]+/[^/]+/assets/\d+/', url_lower):
         return True
     return False
+
+def detect_media_type(url):
+    """Detect if URL is video or image via HEAD request. Returns 'video', 'image', or None."""
+    # If URL has extension, use that
+    url_lower = url.lower().split('?')[0]
+    if any(url_lower.endswith(ext) for ext in VIDEO_EXTS):
+        return 'video'
+    if any(url_lower.endswith(ext) for ext in IMAGE_EXTS):
+        return 'image'
+
+    # For extensionless URLs (like GitHub user-attachments), check Content-Type
+    if 'user-attachments/assets/' in url or re.search(r'/assets/\d+/', url):
+        try:
+            req = Request(url, method='HEAD', headers={"User-Agent": "ComfyUI-3D-Index"})
+            with urlopen(req, timeout=5) as resp:
+                content_type = resp.headers.get('Content-Type', '').lower()
+                if 'video' in content_type:
+                    return 'video'
+                if 'image' in content_type:
+                    return 'image'
+        except Exception:
+            pass
+    return 'image'  # Default to image
 
 def fetch_repo_media(owner, repo, branch):
     """Fetch list of media files from repo via GitHub API."""
@@ -401,15 +431,16 @@ def get_data_tag(model_author):
         return "stability"
     return "community"
 
-def generate_media_gallery(media_urls):
+def generate_media_gallery(media_urls, media_types=None):
     """Generate HTML for media gallery."""
     if not media_urls:
         return ""
 
+    media_types = media_types or {}
     items = []
     for url in media_urls[:6]:
-        url_lower = url.lower()
-        if any(url_lower.endswith(ext) for ext in VIDEO_EXTS):
+        media_type = media_types.get(url, detect_media_type(url))
+        if media_type == 'video':
             items.append(f'<video src="{url}" muted loop playsinline class="gallery-item" onclick="this.paused ? this.play() : this.pause()"></video>')
         else:
             items.append(f'<img src="{url}" alt="Preview" class="gallery-item" loading="lazy" onerror="this.style.display=\'none\'">')
@@ -442,13 +473,18 @@ def generate_card(node, media_urls, node_defs, updated_at):
     if node_names:
         nodes_html = f'''<div class="nodes-list"><span class="nodes-label">Nodes ({len(node_names)}):</span> {", ".join(node_names[:5])}{" ..." if len(node_names) > 5 else ""}</div>'''
 
+    # Detect media types for extensionless URLs
+    media_types = {url: detect_media_type(url) for url in media_urls} if media_urls else {}
+
     # Generate media gallery
-    gallery_html = generate_media_gallery(media_urls)
+    gallery_html = generate_media_gallery(media_urls, media_types)
     fallback_style = "" if media_urls else 'style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 120px;"'
 
     # Data attributes for client-side rendering
     node_data = json.dumps(package_nodes) if package_nodes else "{}"
-    media_data = json.dumps(media_urls) if media_urls else "[]"
+    # Store media as list of {url, type} objects for proper JS rendering
+    media_with_types = [{"url": url, "type": media_types.get(url, "image")} for url in media_urls] if media_urls else []
+    media_data = json.dumps(media_with_types)
 
     # Format updated date for display
     updated_display = ""

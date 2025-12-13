@@ -432,24 +432,25 @@
         .comfy-node-body {
             display: flex;
             padding: 10px 0;
-            overflow: hidden;
+            position: relative;
         }
 
         .comfy-inputs {
             flex: 1;
-            padding: 0 10px 0 15px;
+            padding: 0 10px 0 12px;
             border-right: 1px solid #404060;
         }
 
         .comfy-outputs {
             flex: 1;
-            padding: 0 15px 0 10px;
+            padding: 0 12px 0 10px;
         }
 
         .comfy-node-row {
             display: flex;
             align-items: center;
             margin: 4px 0;
+            position: relative;
         }
 
         .comfy-node-row.output {
@@ -460,17 +461,23 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            flex-shrink: 0;
+            position: absolute;
         }
 
         .comfy-socket.input {
-            margin-right: 8px;
-            margin-left: -10px;
+            left: -6px;
         }
 
         .comfy-socket.output {
-            margin-left: 8px;
-            margin-right: -10px;
+            right: -6px;
+        }
+
+        .comfy-input-name {
+            padding-left: 8px;
+        }
+
+        .comfy-output-name {
+            padding-right: 8px;
         }
 
         .comfy-socket-IMAGE { background: #64b5f6; }
@@ -705,8 +712,11 @@
             if (media.length === 0) {
                 gallery.innerHTML = '<p style="color: #666; text-align: center; grid-column: 1/-1;">No images available</p>';
             } else {
-                for (const url of media) {
-                    const isVideo = /\.(mp4|webm|mov|avi)$/i.test(url);
+                for (const item of media) {
+                    // Support both new format {url, type} and legacy format (string URL)
+                    const url = typeof item === 'string' ? item : item.url;
+                    const mediaType = typeof item === 'string' ? null : item.type;
+                    const isVideo = mediaType === 'video' || /\.(mp4|webm|mov|avi)$/i.test(url);
                     if (isVideo) {
                         gallery.innerHTML += `<video src="${url}" controls muted loop playsinline onerror="this.style.display='none'"></video>`;
                     } else {
