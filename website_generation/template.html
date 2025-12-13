@@ -262,6 +262,86 @@
             border-color: #3498db;
         }
 
+        /* Search bar */
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 40px 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 14px;
+            display: none;
+        }
+
+        .search-clear:hover {
+            color: #666;
+        }
+
+        .search-scope {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .search-scope label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .search-scope label:hover {
+            background: #f0f0f0;
+        }
+
+        .search-scope input[type="radio"] {
+            margin: 0;
+        }
+
+        .search-results-count {
+            font-size: 13px;
+            color: #666;
+            margin-left: auto;
+        }
+
         /* Modal for node viewer */
         .modal {
             display: none;
@@ -523,6 +603,18 @@
 
     <main>
         <nav>
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search nodes..." oninput="searchCards()">
+                    <button class="search-clear" id="searchClear" onclick="clearSearch()">&times;</button>
+                </div>
+                <div class="search-scope">
+                    <span>Search in:</span>
+                    <label><input type="radio" name="searchScope" value="summary" checked onchange="searchCards()"> Summary</label>
+                    <label><input type="radio" name="searchScope" value="readme" onchange="searchCards()"> README</label>
+                </div>
+                <span class="search-results-count" id="searchResultsCount"></span>
+            </div>
             <div class="nav-links">
                 <div class="filter-controls">
                     <!-- FILTER_BUTTONS -->
@@ -776,19 +868,80 @@
         }
 
         // Category filtering
+        let currentCategory = 'all';
+        let currentSearch = '';
+        let currentSearchScope = 'summary';
+
         function filterCards(category) {
+            currentCategory = category;
             // Update button states
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
+            applyFilters();
+        }
 
-            // Show/hide cards based on category
+        // Search functionality
+        function searchCards() {
+            const searchInput = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('searchClear');
+            currentSearch = searchInput.value.toLowerCase().trim();
+            currentSearchScope = document.querySelector('input[name="searchScope"]:checked').value;
+
+            // Show/hide clear button
+            clearBtn.style.display = currentSearch ? 'block' : 'none';
+
+            applyFilters();
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchClear').style.display = 'none';
+            currentSearch = '';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            let visibleCount = 0;
+            let totalCount = 0;
+
             document.querySelectorAll('.card').forEach(card => {
-                if (category === 'all' || card.dataset.category === category) {
+                totalCount++;
+                const matchesCategory = currentCategory === 'all' || card.dataset.category === currentCategory;
+
+                let matchesSearch = true;
+                if (currentSearch) {
+                    const title = card.querySelector('.card-title')?.textContent.toLowerCase() || '';
+                    const author = (card.dataset.author || '').toLowerCase();
+
+                    if (currentSearchScope === 'summary') {
+                        const description = (card.dataset.description || '').toLowerCase();
+                        matchesSearch = title.includes(currentSearch) ||
+                                       description.includes(currentSearch) ||
+                                       author.includes(currentSearch);
+                    } else {
+                        // Search in README
+                        const readme = (card.dataset.readme || '').toLowerCase();
+                        matchesSearch = title.includes(currentSearch) ||
+                                       readme.includes(currentSearch) ||
+                                       author.includes(currentSearch);
+                    }
+                }
+
+                if (matchesCategory && matchesSearch) {
                     card.style.display = '';
+                    visibleCount++;
                 } else {
                     card.style.display = 'none';
                 }
             });
+
+            // Update results count
+            const resultsCount = document.getElementById('searchResultsCount');
+            if (currentSearch) {
+                resultsCount.textContent = `${visibleCount} of ${totalCount} nodes`;
+            } else {
+                resultsCount.textContent = '';
+            }
         }
     </script>
 </body>

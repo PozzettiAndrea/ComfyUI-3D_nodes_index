@@ -398,7 +398,7 @@ def fetch_node_media(node):
     owner, repo = extract_github_info(github_url)
 
     if not owner or not repo:
-        return [], ""
+        return [], "", ""
 
     readme, branch = fetch_readme(owner, repo)
     readme_media = extract_media_from_readme(readme, owner, repo, branch)
@@ -408,7 +408,30 @@ def fetch_node_media(node):
     readme_set = set(readme_media)
     all_media = readme_media + [m for m in repo_media if m not in readme_set]
 
-    return all_media[:12], updated_at
+    # Clean readme for search: strip markdown, limit size
+    readme_text = clean_readme_for_search(readme)
+
+    return all_media[:12], updated_at, readme_text
+
+def clean_readme_for_search(readme):
+    """Clean README content for search indexing."""
+    if not readme:
+        return ""
+    # Remove markdown links but keep text
+    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', readme)
+    # Remove images
+    text = re.sub(r'!\[[^\]]*\]\([^)]+\)', '', text)
+    # Remove HTML tags
+    text = re.sub(r'<[^>]+>', '', text)
+    # Remove code blocks
+    text = re.sub(r'```[\s\S]*?```', '', text)
+    text = re.sub(r'`[^`]+`', '', text)
+    # Remove URLs
+    text = re.sub(r'https?://\S+', '', text)
+    # Collapse whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+    # Limit to 5000 chars to keep HTML size reasonable
+    return text[:5000]
 
 # =============================================================================
 # HTML Generation
@@ -458,7 +481,7 @@ def generate_media_gallery(media_urls, media_types=None):
 
     return f'''<div class="media-gallery">{"".join(items)}</div>'''
 
-def generate_card(node, media_urls, node_defs, updated_at):
+def generate_card(node, media_urls, node_defs, updated_at, readme=""):
     """Generate HTML for a single card"""
     github_url = node["github_url"]
     # Use repo name from URL instead of package title
@@ -471,6 +494,8 @@ def generate_card(node, media_urls, node_defs, updated_at):
     description = node["description"]
     category = node["category"]
     data_tag = get_data_tag(model_author)
+    # Escape readme for HTML attribute
+    readme_escaped = readme.replace('"', '&quot;').replace("'", '&#39;').replace('<', '&lt;').replace('>', '&gt;') if readme else ""
 
     # Get node definitions for this package
     package_nodes = node_defs.get(github_url, {})
@@ -500,7 +525,7 @@ def generate_card(node, media_urls, node_defs, updated_at):
         updated_display = updated_at[:10]  # Just the date part
 
     return f'''
-                    <div class="card" data-tags="{data_tag}" data-nodes='{node_data}' data-media='{media_data}' data-stars="{stars_raw}" data-updated="{updated_at}" data-category="{category}" data-github="{github_url}" data-description="{description}" data-author="{node_author}" data-model-author="{model_author}" onclick="openDetail(this)">
+                    <div class="card" data-tags="{data_tag}" data-nodes='{node_data}' data-media='{media_data}' data-stars="{stars_raw}" data-updated="{updated_at}" data-category="{category}" data-github="{github_url}" data-description="{description}" data-author="{node_author}" data-model-author="{model_author}" data-readme="{readme_escaped}" onclick="openDetail(this)">
                         <div class="card-media" {fallback_style}>
                             {gallery_html if media_urls else ""}
                         </div>
@@ -530,7 +555,7 @@ def generate_html(all_nodes_with_media, node_defs):
 
     # Collect all unique categories
     categories_in_use = set()
-    for node, media, updated in all_nodes_with_media:
+    for node, media, updated, readme in all_nodes_with_media:
         categories_in_use.add(node.get("category", "other-3d"))
 
     # Generate filter buttons
@@ -541,7 +566,7 @@ def generate_html(all_nodes_with_media, node_defs):
 
     # Generate all cards in one grid (sorted by stars)
     sorted_nodes = sorted(all_nodes_with_media, key=lambda x: int(x[0]["stars"]) if x[0]["stars"].isdigit() else 0, reverse=True)
-    all_cards = "\n".join(generate_card(node, media, node_defs, updated) for node, media, updated in sorted_nodes)
+    all_cards = "\n".join(generate_card(node, media, node_defs, updated, readme) for node, media, updated, readme in sorted_nodes)
 
     # Replace placeholders
     html = template.replace("<!-- FILTER_BUTTONS -->", filter_buttons)
@@ -607,17 +632,17 @@ def main():
             for future in as_completed(futures):
                 github_url = futures[future]
                 try:
-                    media, updated_at = future.result()
-                    media_by_url[github_url] = (media, updated_at)
+                    media, updated_at, readme = future.result()
+                    media_by_url[github_url] = (media, updated_at, readme)
                 except Exception:
-                    media_by_url[github_url] = ([], "")
+                    media_by_url[github_url] = ([], "", "")
                 pbar.update(1)
 
     # Build final structure (flat list)
     all_nodes_with_media = []
     for node in all_nodes:
-        media, updated_at = media_by_url.get(node["github_url"], ([], ""))
-        all_nodes_with_media.append((node, media, updated_at))
+        media, updated_at, readme = media_by_url.get(node["github_url"], ([], "", ""))
+        all_nodes_with_media.append((node, media, updated_at, readme))
 
     # Generate HTML
     print("\nGenerating HTML...")
