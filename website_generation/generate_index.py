@@ -312,7 +312,13 @@ def normalize_url(url, owner, repo, branch):
 def is_media_url(url):
     """Check if URL points to a media file."""
     url_lower = url.lower().split('?')[0]
-    return any(url_lower.endswith(ext) for ext in MEDIA_EXTS)
+    # Check file extensions
+    if any(url_lower.endswith(ext) for ext in MEDIA_EXTS):
+        return True
+    # GitHub user-attachments (no extension, but are images)
+    if 'github.com/user-attachments/assets/' in url_lower:
+        return True
+    return False
 
 def fetch_repo_media(owner, repo, branch):
     """Fetch list of media files from repo via GitHub API."""

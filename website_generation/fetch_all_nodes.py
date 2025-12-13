@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fetch all ComfyUI nodes from ComfyUI-Manager and their READMEs into a CSV.
+Fetch all ComfyUI nodes from ComfyUI-Manager AND Comfy Registry, merge and dedupe.
 """
 import csv
 import json
@@ -15,7 +15,8 @@ DATE_TAG = datetime.now().strftime("%Y-%m-%d")
 OUTPUT_FILE = f"all_comfyui_nodes_{DATE_TAG}.csv"
 MANAGER_URL = "https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/custom-node-list.json"
 STATS_URL = "https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/github-stats.json"
-MAX_WORKERS = 50  # Can go higher since it's just HTTP
+REGISTRY_URL = "https://api.comfy.org/nodes"
+MAX_WORKERS = 50
 
 def fetch_manager_nodes():
     """Fetch nodes from ComfyUI-Manager custom-node-list.json."""
@@ -24,7 +25,31 @@ def fetch_manager_nodes():
     with urlopen(req, timeout=30) as resp:
         data = json.loads(resp.read())
     nodes = data.get("custom_nodes", [])
-    print(f"Found {len(nodes)} nodes")
+    print(f"  Found {len(nodes)} nodes")
+    return nodes
+
+def fetch_registry_nodes():
+    """Fetch all nodes from Comfy Registry API."""
+    print("Fetching from Comfy Registry...")
+    nodes = []
+    page = 1
+    while True:
+        url = f"{REGISTRY_URL}?limit=100&page={page}"
+        req = Request(url, headers={"User-Agent": "ComfyUI-3D-Index"})
+        try:
+            with urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read())
+            nodes.extend(data.get("nodes", []))
+            total_pages = data.get("totalPages", 1)
+            if page >= total_pages:
+                break
+            page += 1
+            if page % 10 == 0:
+                print(f"  Page {page}/{total_pages}...")
+        except Exception as e:
+            print(f"  Error on page {page}: {e}")
+            break
+    print(f"  Found {len(nodes)} nodes")
     return nodes
 
 def fetch_github_stats():
@@ -63,26 +88,60 @@ def process_node(args):
     github_url = f"https://github.com/{owner}/{repo}"
     return (idx, [name, github_url, stars, owner, desc, readme])
 
+def extract_github_info_from_url(url):
+    """Extract owner/repo from a GitHub URL."""
+    if not url:
+        return None, None
+    match = re.search(r"github\.com/([^/]+)/([^/\s]+)", url)
+    if match:
+        return match.group(1), match.group(2).replace(".git", "").rstrip("/")
+    return None, None
+
 def main():
-    nodes = fetch_manager_nodes()
+    # Fetch from both sources
+    manager_nodes = fetch_manager_nodes()
+    registry_nodes = fetch_registry_nodes()
     stats = fetch_github_stats()
 
-    # Deduplicate by GitHub repo
-    seen_repos = set()
-    unique_nodes = []
+    # Merge and deduplicate by GitHub repo URL
+    seen_repos = {}  # key -> (node_dict, owner, repo, stars)
 
-    for node in nodes:
+    # Process ComfyUI-Manager nodes first (priority source)
+    for node in manager_nodes:
         owner, repo = extract_github_info(node)
         if owner and repo:
             key = f"{owner}/{repo}".lower()
+            github_url = f"https://github.com/{owner}/{repo}"
+            stars = stats.get(github_url, {}).get("stars", 0)
             if key not in seen_repos:
-                seen_repos.add(key)
-                github_url = f"https://github.com/{owner}/{repo}"
-                stars = stats.get(github_url, {}).get("stars", 0)
-                unique_nodes.append((node, owner, repo, stars))
+                seen_repos[key] = (node, owner, repo, stars)
 
+    manager_count = len(seen_repos)
+    print(f"After ComfyUI-Manager: {manager_count} unique repos")
+
+    # Add Registry nodes (fill in missing)
+    registry_added = 0
+    for node in registry_nodes:
+        repo_url = node.get("repository", "")
+        owner, repo = extract_github_info_from_url(repo_url)
+        if owner and repo:
+            key = f"{owner}/{repo}".lower()
+            if key not in seen_repos:
+                # Convert registry format to our format
+                node_dict = {
+                    "title": node.get("name", ""),
+                    "description": node.get("description", ""),
+                    "reference": repo_url
+                }
+                stars = node.get("github_stars", 0)
+                seen_repos[key] = (node_dict, owner, repo, stars)
+                registry_added += 1
+
+    print(f"Added {registry_added} new repos from Registry")
+
+    unique_nodes = list(seen_repos.values())
     total = len(unique_nodes)
-    print(f"Unique GitHub repos: {total}")
+    print(f"Total unique GitHub repos: {total}")
 
     # Prepare work items
     work_items = [(i, node, owner, repo, stars) for i, (node, owner, repo, stars) in enumerate(unique_nodes)]
