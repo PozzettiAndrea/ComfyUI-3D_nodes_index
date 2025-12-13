@@ -3,16 +3,23 @@ You are analyzing ComfyUI custom node packages to identify 3D-related tools.
 TASK: Analyze the README and provide structured information about this package.
 
 3D-RELEVANT if it involves:
-- 3D model generation (image-to-3D, text-to-3D)
-- Mesh processing (OBJ/GLB/FBX import/export, remeshing, UV)
-- Multi-view generation (Zero123, SV3D, Era3D)
-- Gaussian Splatting (3DGS, NeRF)
-- Depth/normal estimation
-- Point clouds, texturing, CAD formats
-- Rigging & animation, 3D human reconstruction
-- Voxels, SDF, neural 3D representations
+- 3D model generation (image-to-3D, text-to-3D) that outputs actual 3D geometry
+- Mesh processing (OBJ/GLB/FBX/PLY import/export, remeshing, UV mapping)
+- Multi-view generation for 3D reconstruction (Zero123, SV3D, Era3D, MVDream)
+- Gaussian Splatting, NeRF, or other 3D scene representations
+- Depth/normal map estimation for 3D use
+- Point clouds, 3D texturing, CAD formats (STEP, STL)
+- 3D rigging OR animation with skeletal meshes, bones, armatures (NOT 2D video animation)
+- 3D human body/avatar reconstruction with mesh output (SMPL, FLAME, etc.)
+- Voxels, SDF, neural radiance fields
 
-NOT 3D-RELEVANT: Pure 2D image processing, video, audio, text/LLM, workflow utilities.
+NOT 3D-RELEVANT (exclude these):
+- 2D image/video animation (MimicMotion, AnimateAnyone, MusePose, LivePortrait)
+- 2D pose estimation or motion transfer
+- Virtual try-on, face swapping, 2D portrait generation
+- Pure 2D image processing, inpainting, upscaling
+- Video generation/editing without 3D output
+- Audio, text/LLM, workflow utilities
 
 OUTPUT JSON only:
 {

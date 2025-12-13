@@ -417,6 +417,7 @@
             border-radius: 8px;
             overflow: hidden;
             font-size: 12px;
+            min-width: 320px;
         }
 
         .comfy-node-header {
@@ -425,10 +426,23 @@
             padding: 8px 12px;
             font-weight: bold;
             font-size: 13px;
+            text-align: center;
         }
 
         .comfy-node-body {
-            padding: 10px;
+            display: flex;
+            padding: 10px 0;
+        }
+
+        .comfy-inputs {
+            flex: 1;
+            padding: 0 10px;
+            border-right: 1px solid #404060;
+        }
+
+        .comfy-outputs {
+            flex: 1;
+            padding: 0 10px;
         }
 
         .comfy-node-row {
@@ -437,17 +451,25 @@
             margin: 4px 0;
         }
 
+        .comfy-node-row.output {
+            justify-content: flex-end;
+        }
+
         .comfy-socket {
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            margin-right: 8px;
             flex-shrink: 0;
         }
 
+        .comfy-socket.input {
+            margin-right: 8px;
+            margin-left: -15px;
+        }
+
         .comfy-socket.output {
-            margin-right: 0;
             margin-left: 8px;
+            margin-right: -15px;
         }
 
         .comfy-socket-IMAGE { background: #64b5f6; }
@@ -463,33 +485,23 @@
         .comfy-socket-MESH { background: #ce93d8; }
         .comfy-socket-default { background: #78909c; }
 
-        .comfy-input-name {
-            color: #a0a0a0;
-        }
-
+        .comfy-input-name,
         .comfy-output-name {
-            color: #a0a0a0;
-            text-align: right;
-            flex-grow: 1;
+            color: #c0c0c0;
         }
 
         .comfy-type {
-            color: #606060;
+            color: #707070;
             font-size: 10px;
             margin-left: 5px;
         }
 
         .comfy-section-label {
-            color: #707070;
-            font-size: 10px;
-            margin: 8px 0 4px 0;
+            color: #808080;
+            font-size: 9px;
+            margin: 0 0 6px 0;
             text-transform: uppercase;
-        }
-
-        .comfy-outputs {
-            border-top: 1px solid #404060;
-            margin-top: 8px;
-            padding-top: 8px;
+            letter-spacing: 0.5px;
         }
     </style>
 </head>
@@ -586,9 +598,8 @@
                         const socketClass = getSocketClass(inputType);
                         inputsHtml += `
                             <div class="comfy-node-row">
-                                <div class="comfy-socket ${socketClass}"></div>
+                                <div class="comfy-socket input ${socketClass}"></div>
                                 <span class="comfy-input-name">${inputName}</span>
-                                <span class="comfy-type">${inputType}</span>
                             </div>
                         `;
                     }
@@ -604,9 +615,8 @@
                         const socketClass = getSocketClass(inputType);
                         inputsHtml += `
                             <div class="comfy-node-row">
-                                <div class="comfy-socket ${socketClass}"></div>
+                                <div class="comfy-socket input ${socketClass}"></div>
                                 <span class="comfy-input-name">${inputName}</span>
-                                <span class="comfy-type">${inputType}</span>
                             </div>
                         `;
                     }
@@ -616,28 +626,26 @@
             // Outputs
             let outputsHtml = '';
             if (def.outputs && def.outputs.length > 0) {
-                outputsHtml = '<div class="comfy-outputs">';
+                outputsHtml = '<div class="comfy-section-label">Outputs</div>';
                 for (let i = 0; i < def.outputs.length; i++) {
                     const outputType = def.outputs[i];
                     const outputName = def.output_names && def.output_names[i] ? def.output_names[i] : outputType;
                     const socketClass = getSocketClass(outputType);
                     outputsHtml += `
-                        <div class="comfy-node-row">
+                        <div class="comfy-node-row output">
                             <span class="comfy-output-name">${outputName}</span>
-                            <span class="comfy-type">${outputType}</span>
                             <div class="comfy-socket output ${socketClass}"></div>
                         </div>
                     `;
                 }
-                outputsHtml += '</div>';
             }
 
             return `
                 <div class="comfy-node">
                     <div class="comfy-node-header">${name}</div>
                     <div class="comfy-node-body">
-                        ${inputsHtml}
-                        ${outputsHtml}
+                        <div class="comfy-inputs">${inputsHtml || '<div class="comfy-section-label">No inputs</div>'}</div>
+                        <div class="comfy-outputs">${outputsHtml || '<div class="comfy-section-label">No outputs</div>'}</div>
                     </div>
                 </div>
             `;
