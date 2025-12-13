@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Awesome ComfyUI 3D</title>
+    <meta name="description" content="A curated index of ComfyUI 3D nodes for mesh generation, texturing, Gaussian splatting, rigging, and more.">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1520px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin: 40px 0;
+            width: 100%;
+        }
+
+        .section-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-left: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-media {
+            width: 100%;
+            min-height: 120px;
+            background: #f0f0f0;
+            overflow: hidden;
+        }
+
+        .media-gallery {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            width: 100%;
+        }
+
+        .gallery-item {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .gallery-item:hover {
+            opacity: 0.8;
+        }
+
+        .gallery-item:first-child {
+            grid-column: span 2;
+            grid-row: span 2;
+            height: 162px;
+        }
+
+        .card-content {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 5px;
+        }
+
+        .card-title {
+            font-size: 1.05em;
+            font-weight: bold;
+            flex: 1;
+        }
+
+        .card-stars {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.85em;
+            color: #666;
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .card-stars i {
+            color: #f0ad4e;
+        }
+
+        .card-authors {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .card-authors .node-author {
+            color: #0366d6;
+        }
+
+        .card-authors .model-author {
+            color: #888;
+        }
+
+        .card-description {
+            font-size: 0.85em;
+            color: #555;
+            margin-bottom: 10px;
+            flex-grow: 1;
+            line-height: 1.4;
+        }
+
+        .nodes-list {
+            font-size: 0.75em;
+            color: #666;
+            background: #f8f8f8;
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-family: monospace;
+        }
+
+        .nodes-label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .tag {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .tag-io { background: #e3f2fd; color: #1565c0; }
+
+        nav {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        nav .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        nav a {
+            color: #333;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        nav a:hover {
+            color: #3498db;
+        }
+
+        .sort-controls {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+            align-items: center;
+        }
+
+        .sort-controls label {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .sort-btn {
+            padding: 5px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sort-btn:hover {
+            border-color: #3498db;
+            color: #3498db;
+        }
+
+        .sort-btn.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .filter-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .filter-btn {
+            padding: 6px 14px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            border-color: #3498db;
+            color: #3498db;
+        }
+
+        .filter-btn.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        /* Modal for node viewer */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 1200px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            z-index: 10;
+        }
+
+        .modal-close:hover {
+            color: #ccc;
+        }
+
+        /* Detail modal */
+        .detail-content {
+            background: #1a1a2e;
+            border-radius: 12px;
+            max-width: 1000px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .detail-header {
+            padding: 25px 30px;
+            border-bottom: 1px solid #333;
+        }
+
+        .detail-header h2 {
+            color: white;
+            margin: 0 0 10px 0;
+            font-size: 1.5em;
+        }
+
+        .detail-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .detail-stars {
+            color: #f0ad4e;
+            font-size: 14px;
+        }
+
+        .detail-authors {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .detail-description {
+            color: #aaa;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0 0 15px 0;
+        }
+
+        .detail-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .detail-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            border: 1px solid #444;
+            background: #2d2d44;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .detail-btn:hover {
+            background: #3d3d54;
+            border-color: #555;
+        }
+
+        .detail-gallery {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .detail-gallery img,
+        .detail-gallery video {
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .detail-gallery img:hover,
+        .detail-gallery video:hover {
+            transform: scale(1.02);
+        }
+
+        .nodes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        /* ComfyUI-style node rendering */
+        .comfy-node {
+            background: #2d2d44;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 12px;
+        }
+
+        .comfy-node-header {
+            background: #3d5a80;
+            color: white;
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .comfy-node-body {
+            padding: 10px;
+        }
+
+        .comfy-node-row {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+        }
+
+        .comfy-socket {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .comfy-socket.output {
+            margin-right: 0;
+            margin-left: 8px;
+        }
+
+        .comfy-socket-IMAGE { background: #64b5f6; }
+        .comfy-socket-MASK { background: #fff176; }
+        .comfy-socket-LATENT { background: #ff79c6; }
+        .comfy-socket-MODEL { background: #b39ddb; }
+        .comfy-socket-CLIP { background: #ffb74d; }
+        .comfy-socket-VAE { background: #ef5350; }
+        .comfy-socket-CONDITIONING { background: #ffa726; }
+        .comfy-socket-FLOAT { background: #81c784; }
+        .comfy-socket-INT { background: #4db6ac; }
+        .comfy-socket-STRING { background: #90a4ae; }
+        .comfy-socket-MESH { background: #ce93d8; }
+        .comfy-socket-default { background: #78909c; }
+
+        .comfy-input-name {
+            color: #a0a0a0;
+        }
+
+        .comfy-output-name {
+            color: #a0a0a0;
+            text-align: right;
+            flex-grow: 1;
+        }
+
+        .comfy-type {
+            color: #606060;
+            font-size: 10px;
+            margin-left: 5px;
+        }
+
+        .comfy-section-label {
+            color: #707070;
+            font-size: 10px;
+            margin: 8px 0 4px 0;
+            text-transform: uppercase;
+        }
+
+        .comfy-outputs {
+            border-top: 1px solid #404060;
+            margin-top: 8px;
+            padding-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Awesome ComfyUI 3D</h1>
+        <p>A curated index of ComfyUI nodes for 3D generation, processing, and visualization.</p>
+        <p><a href="https://github.com/PozzettiAndrea/ComfyUI-3D_nodes_index">GitHub</a></p>
+    </div>
+
+    <main>
+        <nav>
+            <div class="nav-links">
+                <div class="filter-controls">
+                    <!-- FILTER_BUTTONS -->
+                </div>
+                <div class="sort-controls">
+                    <label>Sort by:</label>
+                    <button class="sort-btn active" onclick="sortCards('stars')">Stars</button>
+                    <button class="sort-btn" onclick="sortCards('updated')">Last Updated</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="content">
+            <div class="cards-container">
+<!-- CARDS -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Detail modal -->
+    <div id="detailModal" class="modal" onclick="if(event.target===this) closeDetail()">
+        <div class="detail-content">
+            <button class="modal-close" onclick="closeDetail()">&times;</button>
+            <div class="detail-header">
+                <h2 id="detailTitle"></h2>
+                <div class="detail-meta">
+                    <span id="detailStars" class="detail-stars"></span>
+                    <span id="detailAuthors" class="detail-authors"></span>
+                    <span id="detailCategory" class="tag tag-io"></span>
+                </div>
+                <p id="detailDescription" class="detail-description"></p>
+                <div class="detail-links">
+                    <a id="detailGithub" href="#" target="_blank" class="detail-btn">View on GitHub</a>
+                    <button id="detailNodesBtn" class="detail-btn" onclick="showNodesFromDetail()">View Nodes</button>
+                </div>
+            </div>
+            <div class="detail-gallery" id="detailGallery"></div>
+        </div>
+    </div>
+
+    <!-- Node viewer modal -->
+    <div id="nodeModal" class="modal" onclick="if(event.target===this) closeModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Nodes</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="nodesGrid" class="nodes-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        // Socket color mapping
+        const socketColors = {
+            'IMAGE': 'comfy-socket-IMAGE',
+            'MASK': 'comfy-socket-MASK',
+            'LATENT': 'comfy-socket-LATENT',
+            'MODEL': 'comfy-socket-MODEL',
+            'CLIP': 'comfy-socket-CLIP',
+            'VAE': 'comfy-socket-VAE',
+            'CONDITIONING': 'comfy-socket-CONDITIONING',
+            'FLOAT': 'comfy-socket-FLOAT',
+            'INT': 'comfy-socket-INT',
+            'STRING': 'comfy-socket-STRING',
+            'MESH': 'comfy-socket-MESH'
+        };
+
+        function getSocketClass(type) {
+            return socketColors[type] || 'comfy-socket-default';
+        }
+
+        function renderNode(name, def) {
+            let inputsHtml = '';
+
+            // Required inputs
+            if (def.inputs && def.inputs.required) {
+                const required = Object.entries(def.inputs.required);
+                if (required.length > 0) {
+                    inputsHtml += '<div class="comfy-section-label">Required</div>';
+                    for (const [inputName, inputType] of required) {
+                        const socketClass = getSocketClass(inputType);
+                        inputsHtml += `
+                            <div class="comfy-node-row">
+                                <div class="comfy-socket ${socketClass}"></div>
+                                <span class="comfy-input-name">${inputName}</span>
+                                <span class="comfy-type">${inputType}</span>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            // Optional inputs
+            if (def.inputs && def.inputs.optional) {
+                const optional = Object.entries(def.inputs.optional);
+                if (optional.length > 0) {
+                    inputsHtml += '<div class="comfy-section-label">Optional</div>';
+                    for (const [inputName, inputType] of optional) {
+                        const socketClass = getSocketClass(inputType);
+                        inputsHtml += `
+                            <div class="comfy-node-row">
+                                <div class="comfy-socket ${socketClass}"></div>
+                                <span class="comfy-input-name">${inputName}</span>
+                                <span class="comfy-type">${inputType}</span>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            // Outputs
+            let outputsHtml = '';
+            if (def.outputs && def.outputs.length > 0) {
+                outputsHtml = '<div class="comfy-outputs">';
+                for (let i = 0; i < def.outputs.length; i++) {
+                    const outputType = def.outputs[i];
+                    const outputName = def.output_names && def.output_names[i] ? def.output_names[i] : outputType;
+                    const socketClass = getSocketClass(outputType);
+                    outputsHtml += `
+                        <div class="comfy-node-row">
+                            <span class="comfy-output-name">${outputName}</span>
+                            <span class="comfy-type">${outputType}</span>
+                            <div class="comfy-socket output ${socketClass}"></div>
+                        </div>
+                    `;
+                }
+                outputsHtml += '</div>';
+            }
+
+            return `
+                <div class="comfy-node">
+                    <div class="comfy-node-header">${name}</div>
+                    <div class="comfy-node-body">
+                        ${inputsHtml}
+                        ${outputsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function showNodeDefs(card) {
+            const nodeData = JSON.parse(card.dataset.nodes || '{}');
+            const title = card.querySelector('.card-title').textContent;
+
+            document.getElementById('modalTitle').textContent = title + ' - Nodes';
+
+            const grid = document.getElementById('nodesGrid');
+            grid.innerHTML = '';
+
+            const nodes = Object.entries(nodeData);
+            if (nodes.length === 0) {
+                grid.innerHTML = '<p style="color: #888;">No node definitions found. The package may use dynamic registration.</p>';
+            } else {
+                for (const [name, def] of nodes) {
+                    grid.innerHTML += renderNode(name, def);
+                }
+            }
+
+            document.getElementById('nodeModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('nodeModal').classList.remove('active');
+        }
+
+        // Detail modal
+        let currentCard = null;
+
+        function openDetail(card) {
+            currentCard = card;
+            const title = card.querySelector('.card-title').textContent;
+            const stars = card.querySelector('.card-stars').textContent;
+            const description = card.dataset.description || '';
+            const author = card.dataset.author || '';
+            const modelAuthor = card.dataset.modelAuthor || '';
+            const category = card.dataset.category || '';
+            const github = card.dataset.github || '';
+            const media = JSON.parse(card.dataset.media || '[]');
+
+            document.getElementById('detailTitle').textContent = title;
+            document.getElementById('detailStars').innerHTML = '<i class="fas fa-star"></i> ' + stars.replace(/[^0-9.k]/g, '');
+            document.getElementById('detailAuthors').textContent = author + (modelAuthor ? ' · ' + modelAuthor : '');
+            document.getElementById('detailCategory').textContent = category;
+            document.getElementById('detailDescription').textContent = description;
+            document.getElementById('detailGithub').href = github;
+
+            // Render gallery
+            const gallery = document.getElementById('detailGallery');
+            gallery.innerHTML = '';
+
+            if (media.length === 0) {
+                gallery.innerHTML = '<p style="color: #666; text-align: center; grid-column: 1/-1;">No images available</p>';
+            } else {
+                for (const url of media) {
+                    const isVideo = /\.(mp4|webm|mov|avi)$/i.test(url);
+                    if (isVideo) {
+                        gallery.innerHTML += `<video src="${url}" controls muted loop playsinline onerror="this.style.display='none'"></video>`;
+                    } else {
+                        gallery.innerHTML += `<img src="${url}" alt="Preview" loading="lazy" onerror="this.style.display='none'" onclick="window.open('${url}', '_blank')">`;
+                    }
+                }
+            }
+
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        function closeDetail() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        function showNodesFromDetail() {
+            if (currentCard) {
+                closeDetail();
+                showNodeDefs(currentCard);
+            }
+        }
+
+        // Close on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeDetail();
+            }
+        });
+
+        // Sorting functionality
+        function sortCards(sortBy) {
+            // Update button states
+            document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Sort cards
+            document.querySelectorAll('.cards-container').forEach(container => {
+                const cards = Array.from(container.querySelectorAll('.card'));
+
+                cards.sort((a, b) => {
+                    if (sortBy === 'stars') {
+                        const starsA = parseInt(a.dataset.stars) || 0;
+                        const starsB = parseInt(b.dataset.stars) || 0;
+                        return starsB - starsA; // Descending
+                    } else if (sortBy === 'updated') {
+                        const dateA = a.dataset.updated || '';
+                        const dateB = b.dataset.updated || '';
+                        return dateB.localeCompare(dateA); // Descending (newest first)
+                    }
+                    return 0;
+                });
+
+                // Re-append in sorted order
+                cards.forEach(card => container.appendChild(card));
+            });
+        }
+
+        // Category filtering
+        function filterCards(category) {
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Show/hide cards based on category
+            document.querySelectorAll('.card').forEach(card => {
+                if (category === 'all' || card.dataset.category === category) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
