@@ -2,7 +2,7 @@
 
 [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
 
-> A curated index of ComfyUI custom nodes for 3D generation, processing, and visualization.
+> A curated index of ComfyUI nodes for 3D generation, processing, and visualization.
 
 ## Categories
 
