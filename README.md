@@ -4,6 +4,8 @@
 
 > A curated index of ComfyUI nodes for 3D generation, processing, and visualization.
 
+**[Browse the visual index](https://pozzettiandrea.github.io/ComfyUI-3D_nodes_index/)**
+
 ## Categories
 
 - [Image-to-3D](#image-to-3d)
