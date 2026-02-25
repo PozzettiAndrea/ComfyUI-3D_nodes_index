@@ -1,0 +1,413 @@
+# ComfyUI-EACloudNodes
+
+A collection of [ComfyUI](https://github.com/comfyanonymous/ComfyUI) custom nodes for interacting with various cloud services, such as LLM providers Groq and OpenRouter. These nodes are designed to work with any ComfyUI instance, including cloud-hosted environments where users may have limited system access.
+
+**Note:** All nodes have been updated to ComfyUI v3 spec for enhanced reliability, validation, and features while maintaining backward compatibility with v1.
+
+## Installation
+
+Use [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager) or to manually install:
+
+1. Clone this repository into your ComfyUI custom_nodes folder:
+  ```bash
+cd ComfyUI/custom_nodes
+git clone https://github.com/EnragedAntelope/ComfyUI-EACloudNodes
+  ```
+2. Install required packages:
+  ```bash
+cd ComfyUI-EACloudNodes
+pip install -r requirements.txt
+  ```
+3. Restart ComfyUI
+
+## Current Nodes
+
+### Common Features Across LLM Nodes
+The following parameters are available in both OpenRouter and Groq nodes:
+
+#### Common Parameters:
+- `api_key`: ⚠️ Your API key (Note: key will be visible in workflows)
+- `model`: Model selection (dropdown or identifier)
+- `system_prompt`: Optional system context setting
+- `user_prompt`: Main prompt/question for the model
+- `temperature`: Controls response randomness (0.0-2.0)
+- `top_p`: Nucleus sampling threshold (0.0-1.0)
+- `frequency_penalty`: Token frequency penalty (-2.0 to 2.0)
+- `presence_penalty`: Token presence penalty (-2.0 to 2.0)
+- `response_format`: Choose between text or JSON object output
+- `seed_mode`: Control reproducibility (Fixed, Random, Increment, Decrement)
+- `max_retries`: Maximum retry attempts (0-5) for recoverable errors
+- `image_input`: Optional image for vision-capable models
+- `additional_params`: Optional JSON object for extra model parameters
+
+#### Common Outputs:
+- `response`: The model's generated text or JSON response
+- `status`: Detailed information about the request, including model used and token counts
+- `help`: Static help text with usage information and repository URL
+
+### Groq Chat (v3)
+
+Interact with Groq's API for ultra-fast inference with various LLM models. **Now fully compatible with ComfyUI v3 spec!**
+
+#### Features:
+- **ComfyUI v3 compatible** - Enhanced reliability and validation
+- High-speed inference with Groq's optimized hardware
+- Comprehensive model selection including production and preview models
+- Support for vision-capable models (Llama-4 Maverick and Scout)
+- Real-time token usage tracking
+- Automatic retry mechanism with exponential backoff
+- Enhanced input validation
+- Detailed tooltips for all parameters
+- Debug mode for troubleshooting
+
+#### Available Models:
+
+**Production Models** (Stable, recommended for production use):
+- `llama-3.1-8b-instant` - Fast 8B parameter model (560 T/sec)
+- `llama-3.3-70b-versatile` - **Default** - Powerful 70B model (280 T/sec)
+- `meta-llama/llama-guard-4-12b` - Safety and moderation model (1200 T/sec)
+- `openai/gpt-oss-120b` - Large open-source GPT (500 T/sec)
+- `openai/gpt-oss-20b` - Efficient open-source GPT (1000 T/sec)
+- `whisper-large-v3` - Speech recognition model
+- `whisper-large-v3-turbo` - Faster speech recognition
+
+**Production Systems** (Agentic systems with tools):
+- `groq/compound` - Multi-model system with tools
+- `groq/compound-mini` - Lightweight agentic system
+
+**Preview Models** (Experimental, for evaluation only):
+- `meta-llama/llama-4-maverick-17b-128e-instruct` - **Vision** (600 T/sec)
+- `meta-llama/llama-4-scout-17b-16e-instruct` - **Vision** (750 T/sec)
+- `meta-llama/llama-prompt-guard-2-22m` - Prompt injection detection
+- `meta-llama/llama-prompt-guard-2-86m` - Enhanced prompt guard
+- `moonshotai/kimi-k2-instruct-0905` - 262K context window (200 T/sec)
+- `openai/gpt-oss-safeguard-20b` - Safety-focused model (1000 T/sec)
+- `playai-tts` - Text-to-speech model
+- `playai-tts-arabic` - Arabic text-to-speech
+- `qwen/qwen3-32b` - Qwen 32B model (400 T/sec)
+
+#### Parameters:
+- `api_key`: ⚠️ Your Groq API key (Get from [console.groq.com/keys](https://console.groq.com/keys))
+- `model`: Select from available models or choose "Manual Input" for custom models
+- `manual_model`: Enter custom model identifier (only used when "Manual Input" is selected)
+- `system_prompt`: Optional system context (disable for vision models)
+- `user_prompt`: Main prompt/question for the model
+- `send_system`: Toggle system prompt sending (must be 'no' for vision models)
+- `temperature`: Controls response randomness (0.0-2.0)
+  - Lower (0.0-0.3): More focused and deterministic
+  - Higher (0.7-2.0): More creative and varied
+- `top_p`: Nucleus sampling threshold (0.0-1.0)
+  - Lower (0.0-0.3): More focused vocabulary
+  - Higher (0.7-1.0): More diverse word selection
+- `max_completion_tokens`: Maximum tokens to generate (1-131,072, varies by model)
+- `frequency_penalty`: Reduce token frequency repetition (-2.0 to 2.0)
+- `presence_penalty`: Encourage topic diversity (-2.0 to 2.0)
+- `response_format`: Choose between "text" or "json_object" output
+- `seed_mode`: Control reproducibility
+  - `fixed`: Use seed_value for consistent outputs
+  - `random`: New random seed each time
+  - `increment`: Increase seed by 1 each run
+  - `decrement`: Decrease seed by 1 each run
+- `seed_value`: Seed for 'fixed' mode (0-9007199254740991)
+- `max_retries`: Auto-retry attempts for recoverable errors (0-5)
+- `debug_mode`: Enable detailed error messages and request debugging
+- `image_input`: Optional image for vision models (Llama-4 only)
+- `additional_params`: Extra model parameters in JSON format
+
+#### Outputs:
+- `response`: The model's generated text or JSON response
+- `status`: Detailed request information including model, seed, and token counts
+- `help`: Comprehensive help text with usage information
+
+#### Vision Model Usage:
+1. Select a vision-capable model:
+   - `meta-llama/llama-4-maverick-17b-128e-instruct`
+   - `meta-llama/llama-4-scout-17b-16e-instruct`
+2. Connect an image to the `image_input` parameter
+3. Set `send_system` to "no" (vision models don't accept system prompts)
+4. Describe what you want to know about the image in `user_prompt`
+
+#### Production vs Preview Models:
+- **Production Models**: Stable, reliable, meet high standards for speed/quality. Recommended for production use.
+- **Preview Models**: Experimental, intended for evaluation only. May be deprecated with short notice.
+
+### OpenRouter Chat (v3)
+
+Interact with OpenRouter's API to access various AI models for text and vision tasks. **Now fully compatible with ComfyUI v3 spec!**
+
+#### Features:
+- **ComfyUI v3 compatible** - Enhanced reliability and validation
+- Access to multiple AI providers through a single API
+- Comprehensive free model selection
+- Vision model support (Llama 3.2, Llama 4 variants)
+- JSON output support
+- Automatic retry mechanism with exponential backoff
+- Enhanced input validation
+- Detailed tooltips for all parameters
+- Debug mode for troubleshooting
+
+#### Available Free Models:
+**Meta Llama Models:**
+- meta-llama/llama-3.3-70b-instruct:free - **Default**
+- meta-llama/llama-3.3-8b-instruct:free
+- meta-llama/llama-3.2-3b-instruct:free
+- meta-llama/llama-3.2-1b-instruct:free
+- meta-llama/llama-3.1-8b-instruct:free
+- meta-llama/llama-4-maverick:free (**Vision**)
+- meta-llama/llama-4-scout:free (**Vision**)
+- meta-llama/llama-3.2-90b-vision-instruct:free (**Vision**)
+
+**Google Models:**
+- google/gemini-2.0-flash-exp:free
+- google/gemma-3-27b-it:free
+- google/gemma-2-27b-it:free
+- google/gemma-2-9b-it:free
+- google/gemma-2-2b-it:free
+- google/gemini-flash-1.5-8b-exp:free
+
+**Mistral Models:**
+- mistralai/mistral-small-3.1:free
+- mistralai/ministral-8b:free
+- mistralai/ministral-3b:free
+- mistralai/mistral-saba-24b:free
+- mistralai/mistral-nemo:free
+- mistralai/mistral-7b-instruct:free
+
+**Qwen Models:**
+- qwen/qwen3-72b:free
+- qwen/qwen-2.5-72b-instruct:free
+- qwen/qwen-2.5-coder-32b-instruct:free
+- qwen/qwen-2.5-7b-instruct:free
+- qwen/qwen-2-7b-instruct:free
+- qwen/qwen2.5-vl-32b-instruct:free (**Vision**)
+- qwen/qwen2-vl-7b-instruct:free (**Vision**)
+- qwen/qvq-72b-preview:free (**Vision**)
+
+**Microsoft Models:**
+- microsoft/phi-4:free
+- microsoft/phi-3.5-mini-128k-instruct:free
+- microsoft/phi-3-medium-128k-instruct:free
+
+**DeepSeek Models:**
+- deepseek/deepseek-r1-zero:free
+- deepseek/deepseek-r1-distill-llama-70b:free
+- deepseek/deepseek-r1-distill-llama-8b:free
+- deepseek/deepseek-r1-distill-qwen-32b:free
+- deepseek/deepseek-r1-distill-qwen-14b:free
+- deepseek/deepseek-r1-distill-qwen-7b:free
+- deepseek/deepseek-r1-distill-qwen-1.5b:free
+- deepseek/deepseek-chat:free
+- deepseek/deepseek-reasoner:free
+- deepseek/deepseek-coder:free
+- sophosympatheia/deephermes-3-405b:free
+
+**Nvidia Models:**
+- nvidia/llama-3.1-nemotron-70b-instruct:free
+- nvidia/nemotron-nano-12b-v2-vl:free (**Vision**)
+
+**Other Models:**
+- openchat/openchat-8b:free
+- openchat/openchat-7b:free
+- anthropic/claude-sonnet-4.5:free
+- sophosympatheia/rogue-rose-103b-v0.6.0:free
+- sophosympatheia/midnight-rose-70b-v1.0.5:free
+- huggingfaceh4/zephyr-7b-beta:free
+
+#### Parameters:
+- `api_key`: ⚠️ Your OpenRouter API key (Get from [https://openrouter.ai/keys](https://openrouter.ai/keys))
+- `model`: Select from free models or choose "Manual Input" for custom models
+- `manual_model`: Enter custom model identifier (only used when "Manual Input" is selected)
+- `base_url`: OpenRouter API endpoint URL (default: https://openrouter.ai/api/v1/chat/completions)
+- `system_prompt`: Optional system context setting
+- `user_prompt`: Main prompt/question for the model (required)
+- `send_system`: Toggle system prompt on/off
+- `temperature`: Controls response randomness (0.0-2.0)
+  - Lower (0.0-0.3): More focused and deterministic
+  - Higher (0.7-2.0): More creative and varied
+- `top_p`: Nucleus sampling threshold (0.0-1.0)
+- `top_k`: Vocabulary limit (1-1000)
+- `max_tokens`: Maximum tokens to generate (1-32,768)
+- `frequency_penalty`: Reduce token frequency repetition (-2.0 to 2.0)
+- `presence_penalty`: Encourage topic diversity (-2.0 to 2.0)
+- `repetition_penalty`: OpenRouter-specific repetition penalty (1.0-2.0, 1.0=off)
+- `response_format`: Choose between "text" or "json_object" output
+- `seed_mode`: Control reproducibility (Fixed, Random, Increment, Decrement)
+- `seed_value`: Seed for 'fixed' mode (0-9007199254740991)
+- `max_retries`: Auto-retry attempts for recoverable errors (0-5)
+- `debug_mode`: Enable detailed error messages and request debugging
+- `image_input`: Optional image for vision models (max 2048x2048)
+- `additional_params`: Extra model parameters in JSON format
+
+#### Outputs:
+- `response`: The model's generated text or JSON response
+- `status`: Detailed request information including model, seed, and token counts
+- `help`: Comprehensive help text with usage information
+
+#### Vision Model Usage:
+1. Select a vision-capable model (marked with **Vision** above)
+2. Connect an image to the `image_input` parameter
+3. Describe what you want to know about the image in `user_prompt`
+4. Vision-capable models include:
+   - Meta Llama: llama-4-maverick, llama-4-scout, llama-3.2-90b-vision
+   - Qwen: qwen2.5-vl-32b, qwen2-vl-7b, qvq-72b-preview
+   - Nvidia: nemotron-nano-12b-v2-vl
+
+### OpenRouter Models Node
+Query and filter available models from OpenRouter's API.
+
+#### Features:
+- Retrieve complete list of available models
+- Filter models using custom search terms (e.g., 'free', 'gpt', 'claude')
+- Sort models by name, pricing, or context length
+- Detailed model information including pricing and context length
+- Easy-to-read formatted output
+
+#### Parameters:
+- `api_key`: ⚠️ Your OpenRouter API key (Note: key will be visible in workflows)
+- `filter_text`: Text to filter models
+- `sort_by`: Sort models by name, pricing, or context length
+- `sort_order`: Choose ascending or descending sort order
+
+## Usage Guide
+
+### Basic Text Generation
+1. Add an LLM node (OpenRouter or Groq) to your workflow
+2. Set your API key
+3. Choose a model
+4. (Optional) Set system prompt for context/behavior
+5. Enter your prompt in the `user_prompt` field
+6. Connect the node's output to view results
+
+### Vision Analysis
+1. Add an LLM node to your workflow
+2. Choose a vision-capable model
+3. Connect an image output to the `image_input`
+4. For Groq vision models, set 'send_system' to 'no'
+5. Add your prompt about the image in `user_prompt`
+6. Connect outputs to view response and status
+
+### Advanced Usage
+- Use `system_prompt` to set context or behavior
+- Adjust temperature and other parameters to control response style
+- Select `json_object` format for structured outputs
+- Monitor token usage via the status output
+- Chain multiple nodes for complex workflows
+- Use seed_mode for reproducible outputs (Fixed) or controlled variation (Increment/Decrement)
+- Use `additional_params` to set model-specific parameters in JSON format:
+  ```json
+  {
+    "min_p": 0.1,
+    "stop": ["\n\n"]
+  }
+  ```
+
+### Parameter Optimization Tips
+- **Temperature**:
+  - Lower (0.1-0.3): More focused, deterministic responses
+  - Higher (0.7-1.0): More creative outputs
+- **Top-p**:
+  - Lower (0.1-0.3): More predictable word choices
+  - Higher (0.7-1.0): More diverse vocabulary
+- **Penalties**:
+  - Use `presence_penalty` to reduce topic repetition
+  - Use `frequency_penalty` to reduce word repetition
+- **Seed Mode**:
+  - `fixed`: Use for reproducible outputs (same seed + params = same output)
+  - `random`: Use for varied responses each time
+  - `increment/decrement`: Use for controlled variation across runs
+- **Token Management**:
+  - Monitor token usage in status output to optimize costs
+  - Adjust `max_completion_tokens` to control response length
+
+### Error Handling
+Both nodes provide detailed error messages for common issues:
+- Missing or invalid API keys
+- Model compatibility issues
+- Image size and format requirements
+- JSON format validation
+- Token limits and usage
+- API rate limits and automatic retries
+- Parameter validation errors
+
+Enable `debug_mode` in the Groq node for detailed troubleshooting information.
+
+## Version History
+
+### v2.0.0 (Current)
+- **MAJOR UPDATE**: All nodes converted to ComfyUI v3 spec
+- **Groq Node v3**:
+  - Updated models list to latest production and preview models
+  - Added new production models: groq/compound, groq/compound-mini
+  - Added new preview models: qwen/qwen3-32b
+  - Set llama-3.3-70b-versatile as default model
+  - Enhanced input validation with validate_inputs method
+  - Improved tooltips with detailed explanations for all parameters
+  - Better error messages and debug mode support
+  - Fixed output labels to use proper display_name syntax
+- **OpenRouter Node v3**:
+  - Converted to v3 spec with enhanced validation
+  - Updated free models list to current 50+ offerings (January 2025)
+  - Organized models by provider: Meta, Google, Mistral, Qwen, Microsoft, DeepSeek, Nvidia, Others
+  - Set meta-llama/llama-3.3-70b-instruct:free as default model
+  - Added comprehensive tooltips for all parameters
+  - Enhanced error handling and debug mode
+  - Better vision model detection and validation
+  - Updated vision models list with all current vision-capable models
+  - Fixed output labels to use proper display_name syntax
+- **OpenRouter Models Node v3**:
+  - Converted to v3 spec
+  - Enhanced validation and error handling
+  - Improved tooltip documentation
+  - Fixed output labels to use proper display_name syntax
+- **Architecture**:
+  - All nodes use stateless design with class methods
+  - Class-level seed tracking for reproducibility
+  - Maintained full backward compatibility with v1 API
+  - Combined v3 entry point for all nodes
+  - Corrected combo input syntax (removed invalid enum classes)
+  - Proper output definition using display_name parameter
+- **Documentation**:
+  - Comprehensive README updates for all v3 nodes
+  - Updated OpenRouter model list with all 50+ current free models
+  - Production vs preview model guidance
+  - Enhanced parameter optimization tips
+  - Detailed vision model usage instructions with current models
+
+### v1.3.0
+- Groq node v3 conversion (initial v3 work)
+
+### Previous Versions
+- See git history for earlier changes
+
+## Technical Details
+
+### ComfyUI v3 Compatibility
+All nodes have been fully migrated to ComfyUI v3 spec:
+- Uses `comfy_api.latest` for enhanced reliability
+- Implements `define_schema()` with comprehensive input/output definitions
+- Stateless design with class methods (`execute()`, `validate_inputs()`)
+- Proper `comfy_entrypoint()` function for v3 registration
+- Combined extension class that registers all nodes
+- Maintains full v1 compatibility through legacy NODE_CLASS_MAPPINGS
+- Graceful fallback when v3 API is unavailable
+
+### API Compatibility
+- **Groq**: OpenAI-compatible API endpoint
+- **OpenRouter**: Multi-provider aggregation API
+- Both support standard OpenAI message format
+- Vision models use base64-encoded images in message content
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Support
+
+For issues, questions, or feature requests:
+- Open an issue on [GitHub](https://github.com/EnragedAntelope/ComfyUI-EACloudNodes/issues)
+- Check existing issues for solutions
+- Enable debug mode for detailed error information
+
+## License
+
+[License](https://github.com/EnragedAntelope/ComfyUI-EACloudNodes/blob/main/LICENSE)

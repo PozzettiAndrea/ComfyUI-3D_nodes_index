@@ -1,0 +1,1 @@
+universal loraを読み込める

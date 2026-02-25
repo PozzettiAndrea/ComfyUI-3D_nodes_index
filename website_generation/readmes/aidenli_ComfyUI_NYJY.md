@@ -1,0 +1,35 @@
+# ComfyUI_NYJY
+
+## 更新日志
+#### 2025-03-16 接入阿里百炼平台（文本推理、图片理解能力），增加了一些针对json和数组的方法。[查看接入方式](docs/bailian.md)
+<br />
+
+[全部更新历史](docs/update_log.md)
+<br />
+<br />
+
+## 节点列表
+#### [Translate -- 翻译节点，对接谷歌翻译和百度翻译，支持多语言。（重要：百度翻译节点配置详细说明）](docs/translate.md)
+
+#### [JoyTag -- 反推图片，输出tags。（点击查看详细）](docs/joytag.md)
+
+#### [JoyCaption -- 反推图片，输出自然语言。（点击查看详细）](docs/joycaption.md)
+
+#### [CivitaiPrompt -- 随机获取C站图片的提示词。（点击查看详细）](docs/civitaiprompt.md)
+<br />
+<br />
+
+## 安装方法（两种方式）
+### 1. 通过ComfyUI Manager安装。
+
+打开ComfyUI Manager，点击“Install via Git URL”按钮
+
+在弹出的对话框中填入：https://github.com/aidenli/ComfyUI_NYJY
+
+![安装](docs/images/install.jpg)
+
+### 2. 手动拷贝
+访问项目地址：https://github.com/aidenli/ComfyUI_NYJY
+点击Code按钮，在弹出的浮层中点击“Download ZIP”。下载后解压到 [你的ConmfyUI目录]/custom_nodes/
+
+![安装](docs/images/install-2.jpg)
