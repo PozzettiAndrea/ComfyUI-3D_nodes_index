@@ -857,6 +857,9 @@
                     } else if (sortBy === 'updated') {
                         const dateA = a.dataset.updated || '';
                         const dateB = b.dataset.updated || '';
+                        if (!dateA && !dateB) return 0;
+                        if (!dateA) return 1;
+                        if (!dateB) return -1;
                         return dateB.localeCompare(dateA); // Descending (newest first)
                     }
                     return 0;
