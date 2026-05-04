@@ -7,6 +7,8 @@ import csv
 import json
 import getpass
 import glob
+import os
+import sys
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.request import urlopen, Request
@@ -90,7 +92,7 @@ def classify_node(api_key, system_prompt, row):
         return {"relevant": False, "confidence": "low", "category": "", "model_author": "", "description": "", "nodes_list": "", "_debug": str(e)[:200]}
 
 def main():
-    api_key = getpass.getpass("OpenRouter API key: ")
+    api_key = os.environ.get("OPENROUTER_API_KEY") or getpass.getpass("OpenRouter API key: ")
     system_prompt = load_prompt()
     skip_list = load_skip_list()
 
@@ -99,7 +101,7 @@ def main():
     print(f"Reading {input_file}...")
     all_rows = []
     with open(input_file, encoding="utf-8") as f:
-        reader = csv.reader(f)
+        reader = csv.reader(line.replace("\x00", "") for line in f)
         header = next(reader)
         for row in reader:
             all_rows.append(row)
@@ -117,8 +119,10 @@ def main():
     if skipped:
         print(f"Skipping {skipped} repos already checked (in skip_list.txt)")
 
-    # Ask for top N by stars
-    top_n = input("Top N nodes by stars (blank for all): ").strip()
+    # Top N by stars: env var TOP_N, or interactive prompt if stdin is a TTY, else all
+    top_n = os.environ.get("TOP_N", "").strip()
+    if not top_n and sys.stdin.isatty():
+        top_n = input("Top N nodes by stars (blank for all): ").strip()
     if top_n:
         top_n = int(top_n)
         # Sort by stars (column 2) descending
