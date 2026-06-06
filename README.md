@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/3fd31dac-508d-48c5-96c4-7c02c4f897b7
+
 # Awesome ComfyUI 3D
 
 [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
