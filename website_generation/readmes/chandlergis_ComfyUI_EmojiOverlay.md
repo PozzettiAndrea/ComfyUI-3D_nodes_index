@@ -1,2 +1,0 @@
-# ComfyUI_EmojiOverlay
-ComfyUI中插入Emoji的Node

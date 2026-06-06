@@ -3,6 +3,7 @@
 Fetch all ComfyUI nodes from ComfyUI-Manager AND Comfy Registry, merge and dedupe.
 """
 import csv
+import glob
 import json
 import re
 from datetime import datetime
@@ -17,6 +18,25 @@ MANAGER_URL = "https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/c
 STATS_URL = "https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/github-stats.json"
 REGISTRY_URL = "https://api.comfy.org/nodes"
 MAX_WORKERS = 50
+
+def load_classified_urls():
+    """Return lowercased github_urls already classified (3D or non-3D) in prior runs.
+
+    Incremental fetch: any repo present in an ai_3d_nodes*.csv or ai_non_3d_nodes*.csv
+    has already had its README fetched and classified, so we skip re-downloading it.
+    """
+    classified = set()
+    for path in glob.glob("ai_3d_nodes*.csv") + glob.glob("ai_non_3d_nodes*.csv"):
+        try:
+            with open(path, encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    url = (row.get("github_url") or "").strip().lower()
+                    if url:
+                        classified.add(url)
+        except Exception:
+            continue
+    return classified
 
 def fetch_manager_nodes():
     """Fetch nodes from ComfyUI-Manager custom-node-list.json."""
@@ -140,8 +160,21 @@ def main():
     print(f"Added {registry_added} new repos from Registry")
 
     unique_nodes = list(seen_repos.values())
+    print(f"Total unique GitHub repos: {len(unique_nodes)}")
+
+    # Incremental: skip repos already classified (3D or non-3D) in prior runs.
+    classified = load_classified_urls()
+    if classified:
+        before = len(unique_nodes)
+        unique_nodes = [
+            (node, owner, repo, stars)
+            for (node, owner, repo, stars) in unique_nodes
+            if f"https://github.com/{owner}/{repo}".lower() not in classified
+        ]
+        print(f"Skipping {before - len(unique_nodes)} already-classified repos; "
+              f"fetching {len(unique_nodes)} new ones")
+
     total = len(unique_nodes)
-    print(f"Total unique GitHub repos: {total}")
 
     # Prepare work items
     work_items = [(i, node, owner, repo, stars) for i, (node, owner, repo, stars) in enumerate(unique_nodes)]

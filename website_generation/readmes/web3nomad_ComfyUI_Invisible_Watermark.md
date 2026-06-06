@@ -1,2 +1,0 @@
-# ComfyUI Invisible Watermark
-

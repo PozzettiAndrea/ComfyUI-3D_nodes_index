@@ -1,1 +1,0 @@
-Output Fake Depth Maps with Detailed Object Boundaries for video-to-video generation used in workflow https://github.com/zengxianyu/Wan2.2-VideoReRender, json file https://github.com/zengxianyu/Wan2.2-VideoReRender/blob/main/ComfyUI/user/default/workflows/video-style-flux-wan2.2fun.json

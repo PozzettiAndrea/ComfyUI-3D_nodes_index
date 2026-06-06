@@ -117,7 +117,7 @@ def main():
 
     skipped = len(all_rows) - len(rows)
     if skipped:
-        print(f"Skipping {skipped} repos already checked (in skip_list.txt)")
+        print(f"Skipping {skipped} repos already classified (in ai_non_3d_nodes*.csv)")
 
     # Top N by stars: env var TOP_N, or interactive prompt if stdin is a TTY, else all
     top_n = os.environ.get("TOP_N", "").strip()

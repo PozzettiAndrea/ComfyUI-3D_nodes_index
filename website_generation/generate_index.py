@@ -20,15 +20,30 @@ from tqdm import tqdm
 
 OUTPUT_FILE = "../index.html"
 
-def find_input_file():
-    """Find the latest ai_3d_nodes CSV file."""
-    files = glob.glob("ai_3d_nodes*.csv")
+def load_all_3d_nodes():
+    """Load and merge every ai_3d_nodes*.csv into one deduped list of rows.
+
+    Fetch is incremental, so each dated CSV holds only the repos newly found that run.
+    The full catalog is the union of all of them. We dedupe by github_url with
+    newest-file-wins (later date suffix overrides earlier), so re-classified repos keep
+    their most recent category/description.
+    """
+    files = sorted(glob.glob("ai_3d_nodes*.csv"))  # ascending by date suffix
     if not files:
-        # Fallback to old name
         if Path("3d_nodes.csv").exists():
-            return "3d_nodes.csv"
-        raise FileNotFoundError("No ai_3d_nodes*.csv or 3d_nodes.csv found")
-    return sorted(files)[-1]  # Latest by date suffix
+            files = ["3d_nodes.csv"]
+        else:
+            raise FileNotFoundError("No ai_3d_nodes*.csv or 3d_nodes.csv found")
+
+    by_url = {}  # github_url(lower) -> row; later files overwrite earlier
+    for path in files:
+        with open(path, encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                url = (row.get("github_url") or "").strip()
+                if url:
+                    by_url[url.lower()] = row
+    print(f"Merged {len(files)} CSV(s) -> {len(by_url)} unique 3D packages")
+    return list(by_url.values())
 
 CLONE_DIR = "/tmp/comfyui_nodes"
 MAX_WORKERS_CLONE = 5
@@ -513,11 +528,18 @@ def generate_card(node, media_urls, node_defs, updated_at, readme=""):
     gallery_html = generate_media_gallery(media_urls, media_types)
     fallback_style = "" if media_urls else 'style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 120px;"'
 
-    # Data attributes for client-side rendering
-    node_data = json.dumps(package_nodes) if package_nodes else "{}"
+    # Data attributes for client-side rendering.
+    # These JSON blobs sit inside single-quoted HTML attributes and are read back via
+    # card.dataset.* + JSON.parse, so escape HTML-significant chars (esp. apostrophes,
+    # which appear in stringified combo widgets like "['sRGB', 'Linear']" and would
+    # otherwise terminate the attribute early). The browser decodes them before JSON.parse.
+    def esc_attr(s):
+        return s.replace('&', '&amp;').replace("'", '&#39;').replace('<', '&lt;').replace('>', '&gt;')
+
+    node_data = esc_attr(json.dumps(package_nodes) if package_nodes else "{}")
     # Store media as list of {url, type} objects for proper JS rendering
     media_with_types = [{"url": url, "type": media_types.get(url, "image")} for url in media_urls] if media_urls else []
-    media_data = json.dumps(media_with_types)
+    media_data = esc_attr(json.dumps(media_with_types))
 
     # Format updated date for display
     updated_display = ""
@@ -577,18 +599,13 @@ def generate_html(all_nodes_with_media, node_defs):
 def main():
     os.makedirs(CLONE_DIR, exist_ok=True)
 
-    # Find and read CSV
-    input_file = find_input_file()
-    print(f"Reading {input_file}...")
+    # Load and merge all 3D CSVs (incremental fetch means each file is partial)
     nodes_by_category = defaultdict(list)
-
-    with open(input_file, encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            category = row.get("category", "other-3d")
-            if category not in CATEGORIES:
-                category = "other-3d"
-            nodes_by_category[category].append(row)
+    for row in load_all_3d_nodes():
+        category = row.get("category", "other-3d")
+        if category not in CATEGORIES:
+            category = "other-3d"
+        nodes_by_category[category].append(row)
 
     total = sum(len(nodes) for nodes in nodes_by_category.values())
     print(f"Found {total} packages in {len(nodes_by_category)} categories")

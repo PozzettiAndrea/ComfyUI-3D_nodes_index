@@ -1,1 +1,0 @@
-# ComfyUI-IMG_Query
