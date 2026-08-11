@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Awesome ComfyUI 3D</title>
+    <meta name="robots" content="noindex">
+    <script>
+        /* GitHub Pages serves static files with no rewrite rules, so a direct hit on a
+           router path (/gaussian-splatting, /node/<slug>) lands here instead of on the
+           index. Bounce to the index with the original path preserved in ?p=; the
+           router in index.html decodes it and restores the clean URL.
+
+           Base detection mirrors splitPath() in template.html: routes are either
+           <base>/<category> or <base>/node/<slug>[/nodes]. */
+        (function () {
+            var path = location.pathname;
+            var nodeIndex = path.indexOf('/node/');
+            var base = nodeIndex !== -1
+                ? path.slice(0, nodeIndex + 1)
+                : path.replace(/\/+$/, '').replace(/\/[^\/]*$/, '/');
+            // Carry any existing query (e.g. ?sort=updated) through the bounce.
+            var extra = location.search ? '&' + location.search.slice(1) : '';
+            location.replace(base + '?p=' + encodeURIComponent(path) + extra + location.hash);
+        })();
+    </script>
+</head>
+
+<body>
+    <noscript>
+        <h1>Page not found</h1>
+        <p><a href="/">Back to the index</a></p>
+    </noscript>
+</body>
+
+</html>

@@ -15,6 +15,10 @@ from urllib.request import urlopen, Request
 from pathlib import Path
 from tqdm import tqdm
 
+# all_comfyui_nodes_*.csv stores whole READMEs in one field, which routinely exceeds
+# csv's default 128 KB field cap and aborts the read with "field larger than field limit".
+csv.field_size_limit(1 << 30)
+
 DATE_TAG = datetime.now().strftime("%Y-%m-%d")
 OUTPUT_3D = f"ai_3d_nodes_{DATE_TAG}.csv"
 OUTPUT_NON_3D = f"ai_non_3d_nodes_{DATE_TAG}.csv"  # Also serves as skip list
@@ -210,7 +214,7 @@ def main():
             ])
 
     print(f"\nDone! Found {len(results_3d)} 3D-relevant nodes.")
-    print(f"Review {OUTPUT_3D} and copy entries to 3d_nodes.csv for the website.")
+    print(f"Review {OUTPUT_3D}, then run generate_index.py — it merges every ai_3d_nodes*.csv automatically.")
 
 if __name__ == "__main__":
     main()

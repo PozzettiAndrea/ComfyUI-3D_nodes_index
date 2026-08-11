@@ -124,6 +124,44 @@
             color: #f0ad4e;
         }
 
+        .card-badges {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        /* Last-updated badge, colour-coded by age: green within 90 days, amber within
+           a year, red beyond that. Makes abandoned packages obvious at a glance. */
+        .card-updated {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.78em;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+
+        .card-updated.fresh   { background: #e6f4ea; color: #1e7e34; }
+        .card-updated.recent  { background: #fff4e5; color: #b26a00; }
+        .card-updated.stale   { background: #fdecea; color: #b71c1c; }
+        .card-updated.unknown { background: #f0f0f0; color: #888; }
+
+        .detail-updated {
+            font-size: 14px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 10px;
+        }
+
+        .detail-updated.fresh   { background: #1e7e34; color: #fff; }
+        .detail-updated.recent  { background: #b26a00; color: #fff; }
+        .detail-updated.stale   { background: #b71c1c; color: #fff; }
+        .detail-updated.unknown { background: #444; color: #bbb; }
+
         .card-authors {
             font-size: 0.8em;
             color: #666;
@@ -260,6 +298,29 @@
             background: #3498db;
             color: white;
             border-color: #3498db;
+        }
+
+        /* Package count on each filter button. Tracks the search box, so it always
+           reflects how many packages clicking the button would actually show. */
+        .filter-count {
+            display: inline-block;
+            margin-left: 5px;
+            padding: 1px 6px;
+            border-radius: 9px;
+            background: #eef1f4;
+            color: #667;
+            font-size: 11px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .filter-btn.active .filter-count {
+            background: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+
+        .filter-btn.empty {
+            opacity: 0.45;
         }
 
         /* Search bar */
@@ -621,8 +682,8 @@
                 </div>
                 <div class="sort-controls">
                     <label>Sort by:</label>
-                    <button class="sort-btn active" onclick="sortCards('stars')">Stars</button>
-                    <button class="sort-btn" onclick="sortCards('updated')">Last Updated</button>
+                    <button class="sort-btn active" data-sort="stars" onclick="sortCards('stars')">Stars</button>
+                    <button class="sort-btn" data-sort="updated" onclick="sortCards('updated')">Last Updated</button>
                 </div>
             </div>
         </nav>
@@ -642,6 +703,7 @@
                 <h2 id="detailTitle"></h2>
                 <div class="detail-meta">
                     <span id="detailStars" class="detail-stars"></span>
+                    <span id="detailUpdated" class="detail-updated"></span>
                     <span id="detailAuthors" class="detail-authors"></span>
                     <span id="detailCategory" class="tag tag-io"></span>
                 </div>
@@ -751,9 +813,10 @@
             `;
         }
 
-        function showNodeDefs(card) {
+        function showNodeDefs(card, push) {
             const nodeData = JSON.parse(card.dataset.nodes || '{}');
             const title = card.querySelector('.card-title').textContent;
+            currentCard = card;
 
             document.getElementById('modalTitle').textContent = title + ' - Nodes';
 
@@ -770,16 +833,23 @@
             }
 
             document.getElementById('nodeModal').classList.add('active');
+            if (push !== false) pushRoute({ type: 'nodes', slug: card.dataset.slug });
         }
 
-        function closeModal() {
-            document.getElementById('nodeModal').classList.remove('active');
+        function closeModal(fromPopstate) {
+            const modal = document.getElementById('nodeModal');
+            if (!modal.classList.contains('active')) return;
+            modal.classList.remove('active');
+            // Step back out to the package route the node list belongs to.
+            if (!fromPopstate && currentCard) {
+                pushRoute({ type: 'node', slug: currentCard.dataset.slug });
+            }
         }
 
         // Detail modal
         let currentCard = null;
 
-        function openDetail(card) {
+        function openDetail(card, push) {
             currentCard = card;
             const title = card.querySelector('.card-title').textContent;
             const stars = card.querySelector('.card-stars').textContent;
@@ -792,6 +862,17 @@
 
             document.getElementById('detailTitle').textContent = title;
             document.getElementById('detailStars').innerHTML = '<i class="fas fa-star"></i> ' + stars.replace(/[^0-9.k]/g, '');
+
+            // Mirror the card's last-updated badge, reusing the card's own colour class
+            // so the two views can never disagree about how stale a package is.
+            const updatedBadge = document.getElementById('detailUpdated');
+            const cardBadge = card.querySelector('.card-updated');
+            const updatedDate = (card.dataset.updated || '').slice(0, 10);
+            const freshness = cardBadge
+                ? (['fresh', 'recent', 'stale'].find(c => cardBadge.classList.contains(c)) || 'unknown')
+                : 'unknown';
+            updatedBadge.className = 'detail-updated ' + freshness;
+            updatedBadge.innerHTML = '<i class="far fa-clock"></i> Updated ' + (updatedDate || 'unknown');
             document.getElementById('detailAuthors').textContent = author + (modelAuthor ? ' · ' + modelAuthor : '');
             document.getElementById('detailCategory').textContent = category;
             document.getElementById('detailDescription').textContent = description;
@@ -818,32 +899,49 @@
             }
 
             document.getElementById('detailModal').classList.add('active');
+            if (push !== false) pushRoute({ type: 'node', slug: card.dataset.slug });
         }
 
-        function closeDetail() {
-            document.getElementById('detailModal').classList.remove('active');
+        function closeDetail(fromPopstate) {
+            const modal = document.getElementById('detailModal');
+            if (!modal.classList.contains('active')) return;
+            modal.classList.remove('active');
+            // Returning to the list: restore whichever category is active, so the URL
+            // matches what is actually on screen.
+            if (!fromPopstate) {
+                pushRoute(currentCategory === 'all'
+                    ? { type: 'all' }
+                    : { type: 'category', slug: currentCategory });
+            }
         }
 
         function showNodesFromDetail() {
             if (currentCard) {
-                closeDetail();
-                showNodeDefs(currentCard);
+                const card = currentCard;
+                closeDetail(true);   // no route push; showNodeDefs pushes the /nodes route
+                showNodeDefs(card);
             }
         }
 
         // Close on escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                closeModal();
-                closeDetail();
+                if (document.getElementById('nodeModal').classList.contains('active')) {
+                    closeModal();
+                } else {
+                    closeDetail();
+                }
             }
         });
 
         // Sorting functionality
-        function sortCards(sortBy) {
+        let currentSort = 'stars';
+
+        function sortCards(sortBy, push) {
+            currentSort = sortBy;
             // Update button states
-            document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            document.querySelectorAll('.sort-btn').forEach(btn =>
+                btn.classList.toggle('active', btn.dataset.sort === sortBy));
 
             // Sort cards
             document.querySelectorAll('.cards-container').forEach(container => {
@@ -868,6 +966,10 @@
                 // Re-append in sorted order
                 cards.forEach(card => container.appendChild(card));
             });
+
+            // Sort order is part of the shareable link, so a URL reproduces exactly
+            // what the sender was looking at.
+            if (push !== false) pushRoute(currentRoute(), true);
         }
 
         // Category filtering
@@ -875,11 +977,20 @@
         let currentSearch = '';
         let currentSearchScope = 'summary';
 
-        function filterCards(category) {
+        // Accepts the clicked button (from onclick="filterCards(this)") or a bare slug.
+        function filterCards(target, push) {
+            const category = (typeof target === 'string') ? target : target.dataset.category;
+            setCategory(category);
+            if (push !== false) {
+                pushRoute(category === 'all' ? { type: 'all' } : { type: 'category', slug: category });
+            }
+        }
+
+        // Apply a category without touching history — the router's way in.
+        function setCategory(category) {
             currentCategory = category;
-            // Update button states
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            document.querySelectorAll('.filter-btn').forEach(btn =>
+                btn.classList.toggle('active', btn.dataset.category === category));
             applyFilters();
         }
 
@@ -906,6 +1017,11 @@
         function applyFilters() {
             let visibleCount = 0;
             let totalCount = 0;
+            // Per-category tallies of what matches the *search* alone, ignoring the active
+            // category — that is what the filter buttons advertise, so each button shows
+            // how many packages you would get by clicking it.
+            const searchMatchesByCategory = {};
+            let searchMatchesTotal = 0;
 
             document.querySelectorAll('.card').forEach(card => {
                 totalCount++;
@@ -930,12 +1046,28 @@
                     }
                 }
 
+                if (matchesSearch) {
+                    const cat = card.dataset.category || 'other-3d';
+                    searchMatchesByCategory[cat] = (searchMatchesByCategory[cat] || 0) + 1;
+                    searchMatchesTotal++;
+                }
+
                 if (matchesCategory && matchesSearch) {
                     card.style.display = '';
                     visibleCount++;
                 } else {
                     card.style.display = 'none';
                 }
+            });
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                const countEl = btn.querySelector('.filter-count');
+                if (!countEl) return;
+                const cat = btn.dataset.category;
+                const n = cat === 'all' ? searchMatchesTotal : (searchMatchesByCategory[cat] || 0);
+                countEl.textContent = n;
+                // Dim categories the current search has emptied.
+                btn.classList.toggle('empty', n === 0);
             });
 
             // Update results count
@@ -946,6 +1078,166 @@
                 resultsCount.textContent = '';
             }
         }
+
+        /* ---------------------------------------------------------------
+           URL routing
+
+           Every view has a real, shareable path:
+             <base>/                       all packages
+             <base>/gaussian-splatting     category filter
+             <base>/node/comfyui-3d-pack   package detail
+             <base>/node/comfyui-3d-pack/nodes   its node list
+
+           GitHub Pages serves static files only, so a direct hit on one of
+           these paths 404s. 404.html bounces it back here as ?p=<path>,
+           which we decode and then rewrite to the clean URL. <base> is
+           derived at runtime, so the same page works at the repo subpath on
+           Pages and at / on a local server.
+           --------------------------------------------------------------- */
+        let BASE_PATH = '/';
+        const SITE_TITLE = 'Awesome ComfyUI 3D';
+
+        function categorySlugs() {
+            return Array.from(document.querySelectorAll('.filter-btn'))
+                .map(btn => btn.dataset.category)
+                .filter(cat => cat && cat !== 'all');
+        }
+
+        function cardBySlug(slug) {
+            if (!slug) return null;
+            return document.querySelector(`.card[data-slug="${CSS.escape(slug)}"]`);
+        }
+
+        // Split a pathname into the site base and the route it encodes.
+        function splitPath(pathname) {
+            const path = pathname.replace(/\/index\.html$/, '/');
+
+            const nodeMatch = path.match(/\/node\/([^\/]+)(\/nodes)?\/?$/);
+            if (nodeMatch) {
+                return {
+                    base: path.slice(0, nodeMatch.index) + '/',
+                    route: {
+                        type: nodeMatch[2] ? 'nodes' : 'node',
+                        slug: decodeURIComponent(nodeMatch[1]).toLowerCase()
+                    }
+                };
+            }
+
+            const trimmed = path.replace(/\/+$/, '');
+            const cut = trimmed.lastIndexOf('/') + 1;
+            const last = decodeURIComponent(trimmed.slice(cut));
+            if (categorySlugs().includes(last)) {
+                return { base: trimmed.slice(0, cut), route: { type: 'category', slug: last } };
+            }
+
+            return { base: path.endsWith('/') ? path : path + '/', route: { type: 'all' } };
+        }
+
+        // The route the page is currently showing, for re-pushing after a sort change.
+        function currentRoute() {
+            if (currentCard && document.getElementById('nodeModal').classList.contains('active')) {
+                return { type: 'nodes', slug: currentCard.dataset.slug };
+            }
+            if (currentCard && document.getElementById('detailModal').classList.contains('active')) {
+                return { type: 'node', slug: currentCard.dataset.slug };
+            }
+            return currentCategory === 'all' ? { type: 'all' } : { type: 'category', slug: currentCategory };
+        }
+
+        function routeToPath(route) {
+            let path = BASE_PATH;
+            if (route) {
+                if (route.type === 'category') path = BASE_PATH + encodeURIComponent(route.slug);
+                else if (route.type === 'node') path = BASE_PATH + 'node/' + encodeURIComponent(route.slug);
+                else if (route.type === 'nodes') path = BASE_PATH + 'node/' + encodeURIComponent(route.slug) + '/nodes';
+            }
+            // Only non-default sort is carried, to keep ordinary links clean.
+            return currentSort && currentSort !== 'stars' ? path + '?sort=' + currentSort : path;
+        }
+
+        function updateTitle(route) {
+            if (route && route.type === 'category') {
+                const btn = document.querySelector(`.filter-btn[data-category="${CSS.escape(route.slug)}"]`);
+                // data-label, not textContent — the latter now carries the count too.
+                document.title = (btn ? (btn.dataset.label || btn.textContent).trim() : route.slug) + ' · ' + SITE_TITLE;
+            } else if (route && (route.type === 'node' || route.type === 'nodes')) {
+                const card = cardBySlug(route.slug);
+                document.title = (card ? card.dataset.name : route.slug) + ' · ' + SITE_TITLE;
+            } else {
+                document.title = SITE_TITLE;
+            }
+        }
+
+        function pushRoute(route, replace) {
+            const url = routeToPath(route);
+            try {
+                if (replace) history.replaceState(route, '', url);
+                else history.pushState(route, '', url);
+            } catch (err) {
+                // file:// forbids history writes — the page still works, just without URLs.
+            }
+            updateTitle(route);
+        }
+
+        // Render a route. Never pushes history — callers own that.
+        function applyRoute(route) {
+            closeModal(true);
+            closeDetail(true);
+
+            if (route && (route.type === 'node' || route.type === 'nodes')) {
+                const card = cardBySlug(route.slug);
+                if (card) {
+                    if (route.type === 'nodes') showNodeDefs(card, false);
+                    else openDetail(card, false);
+                    updateTitle(route);
+                    return;
+                }
+                // Unknown package (renamed or dropped from the index): fall back to the
+                // full list rather than leaving a dead URL in the bar.
+                setCategory('all');
+                pushRoute({ type: 'all' }, true);
+                return;
+            }
+
+            if (route && route.type === 'category' && categorySlugs().includes(route.slug)) {
+                setCategory(route.slug);
+            } else {
+                setCategory('all');
+            }
+            updateTitle(route);
+        }
+
+        window.addEventListener('popstate', (event) => {
+            const route = event.state || splitPath(location.pathname).route;
+            applyRoute(route);
+        });
+
+        (function initRouter() {
+            // A path bounced here by 404.html arrives as ?p=<original pathname>.
+            const params = new URLSearchParams(location.search);
+            const bounced = params.get('p');
+
+            // Restore sort before rendering so the first paint is already ordered.
+            const wantedSort = params.get('sort');
+            if (wantedSort === 'updated' || wantedSort === 'stars') sortCards(wantedSort, false);
+
+            if (bounced) {
+                // The bounce already landed us on the real index, so location.pathname is
+                // the authoritative base — deriving it from ?p= instead would mis-read an
+                // unrecognised path as part of the base.
+                BASE_PATH = splitPath(location.pathname).base;
+                var route = splitPath(bounced.startsWith('/') ? bounced : '/' + bounced).route;
+            } else {
+                const parsed = splitPath(location.pathname);
+                BASE_PATH = parsed.base;
+                route = parsed.route;
+            }
+
+            applyRoute(route);
+            // Normalise the address bar: drops ?p=, and turns /index.html into /.
+            history.replaceState(route, '', routeToPath(route));
+            updateTitle(route);
+        })();
     </script>
 </body>
 </html>

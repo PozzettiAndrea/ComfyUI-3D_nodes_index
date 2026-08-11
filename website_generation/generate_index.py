@@ -11,7 +11,8 @@ import json
 import os
 import shutil
 import subprocess
-from collections import defaultdict
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError
@@ -41,13 +42,80 @@ def load_all_3d_nodes():
             for row in csv.DictReader(f):
                 url = (row.get("github_url") or "").strip()
                 if url:
+                    row["category"] = normalize_category(row.get("category"))
                     by_url[url.lower()] = row
     print(f"Merged {len(files)} CSV(s) -> {len(by_url)} unique 3D packages")
     return list(by_url.values())
 
+def normalize_category(value):
+    """Coerce a classifier category to one of CATEGORIES.
+
+    The model occasionally hedges and returns several categories in one field
+    ("visualization,mesh-processing" or "text-to-3d|image-to-3d"). A package lives in
+    exactly one bucket here, and the value is now also a URL slug, so take the first
+    recognised category rather than dropping the package into Other 3D.
+    """
+    raw = (value or "").strip()
+    if raw in CATEGORIES:
+        return raw
+    for part in re.split(r"[,|/;]+", raw):
+        part = part.strip().lower()
+        if part in CATEGORIES:
+            return part
+    return "other-3d"
+
 CLONE_DIR = "/tmp/comfyui_nodes"
 MAX_WORKERS_CLONE = 5
 MAX_WORKERS_MEDIA = 20
+
+# This stage makes ~2 GitHub API calls per package. Anonymous access is capped at
+# 60 requests/hour, which silently returns empty media and dates for most of the
+# catalog. A token raises the cap to 5000/hour. Falls back to the gh CLI's token.
+def _candidate_tokens():
+    for env in ("GITHUB_TOKEN", "GH_TOKEN"):
+        value = os.environ.get(env)
+        if value and value.strip():
+            yield env, value.strip()
+    try:
+        result = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0 and result.stdout.strip():
+            yield "gh auth token", result.stdout.strip()
+    except Exception:
+        pass
+
+def _github_token():
+    """Return the first token that actually authenticates, else "" for anonymous.
+
+    An expired token is worse than none: GitHub answers 401 to every request, where
+    anonymous access would still have served 60 requests/hour. Verify once up front
+    rather than silently producing an index with no dates or media.
+    """
+    for source, token in _candidate_tokens():
+        try:
+            req = Request("https://api.github.com/rate_limit",
+                          headers={"User-Agent": "ComfyUI-3D-Index", "Authorization": f"Bearer {token}"})
+            with urlopen(req, timeout=15) as resp:
+                limit = json.loads(resp.read())["rate"]["limit"]
+            print(f"GitHub auth: using {source} ({limit} requests/hour)")
+            return token
+        except HTTPError as e:
+            if e.code == 401:
+                print(f"GitHub auth: {source} is invalid/expired — ignoring it")
+                continue
+            print(f"GitHub auth: {source} check failed ({e.code}) — ignoring it")
+        except Exception as e:
+            print(f"GitHub auth: {source} check failed ({e}) — ignoring it")
+    print("GitHub auth: anonymous (60 requests/hour) — dates and media will be "
+          "incomplete for a catalog this size. Set GITHUB_TOKEN or run: gh auth login")
+    return ""
+
+GITHUB_TOKEN = _github_token()
+
+def github_headers():
+    headers = {"User-Agent": "ComfyUI-3D-Index"}
+    if GITHUB_TOKEN:
+        headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+    return headers
 
 # Category display names and order
 CATEGORIES = {
@@ -352,8 +420,31 @@ def is_media_url(url):
         return True
     return False
 
+# Probing an extensionless URL costs a network round trip. Card generation is
+# single-threaded, so without this cache the whole catalog is probed serially and
+# dominates the runtime of the final stage. warm_media_type_cache() fills it in parallel.
+_MEDIA_TYPE_CACHE = {}
+
+def warm_media_type_cache(media_by_url):
+    """Resolve every media type up front, in parallel, so generate_card() never blocks."""
+    urls = {url for media, _, _ in media_by_url.values() for url in media}
+    todo = [u for u in urls if u not in _MEDIA_TYPE_CACHE]
+    if not todo:
+        return
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS_MEDIA) as executor:
+        futures = {executor.submit(detect_media_type, url): url for url in todo}
+        with tqdm(total=len(todo), desc="Resolving media types", unit="url") as pbar:
+            for future in as_completed(futures):
+                try:
+                    _MEDIA_TYPE_CACHE[futures[future]] = future.result()
+                except Exception:
+                    _MEDIA_TYPE_CACHE[futures[future]] = 'image'
+                pbar.update(1)
+
 def detect_media_type(url):
     """Detect if URL is video or image via HEAD request. Returns 'video', 'image', or None."""
+    if url in _MEDIA_TYPE_CACHE:
+        return _MEDIA_TYPE_CACHE[url]
     # If URL has extension, use that
     url_lower = url.lower().split('?')[0]
     if any(url_lower.endswith(ext) for ext in VIDEO_EXTS):
@@ -381,7 +472,7 @@ def fetch_repo_media(owner, repo, branch):
     media = []
     try:
         url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/{branch}?recursive=1"
-        req = Request(url, headers={"User-Agent": "ComfyUI-3D-Index"})
+        req = Request(url, headers=github_headers())
         with urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read())
 
@@ -396,16 +487,38 @@ def fetch_repo_media(owner, repo, branch):
 
     return media
 
-def fetch_repo_updated_at(owner, repo):
-    """Fetch last updated date from GitHub API."""
+def fetch_repo_meta(owner, repo):
+    """Fetch live repo state from GitHub.
+
+    One call yields the push date, the current star count and whether the repo still
+    exists. Stars in the CSVs are frozen at classification time (the pipeline never
+    re-classifies an indexed repo), so this is what keeps them honest.
+
+    state is 'ok' | 'archived' | 'moved' | 'gone' | 'unknown'. Only 'gone' is a
+    definitive 404/410; 'unknown' means the request failed and the caller must not
+    treat it as evidence of anything.
+    """
+    meta = {"updated_at": "", "stars": None, "state": "unknown", "full_name": ""}
     try:
         url = f"https://api.github.com/repos/{owner}/{repo}"
-        req = Request(url, headers={"User-Agent": "ComfyUI-3D-Index"})
+        req = Request(url, headers=github_headers())
         with urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read())
-            return data.get("pushed_at", "")  # ISO format: 2024-01-15T10:30:00Z
+        meta["updated_at"] = data.get("pushed_at", "")  # ISO: 2024-01-15T10:30:00Z
+        meta["stars"] = data.get("stargazers_count")
+        meta["full_name"] = data.get("full_name", "")
+        if data.get("archived"):
+            meta["state"] = "archived"
+        elif meta["full_name"].lower() != f"{owner}/{repo}".lower():
+            meta["state"] = "moved"
+        else:
+            meta["state"] = "ok"
+    except HTTPError as e:
+        if e.code in (404, 410):
+            meta["state"] = "gone"
     except Exception:
-        return ""
+        pass
+    return meta
 
 def fetch_node_media(node):
     """Fetch all media for a node."""
@@ -413,12 +526,12 @@ def fetch_node_media(node):
     owner, repo = extract_github_info(github_url)
 
     if not owner or not repo:
-        return [], "", ""
+        return [], {"updated_at": "", "stars": None, "state": "unknown", "full_name": ""}, ""
 
     readme, branch = fetch_readme(owner, repo)
     readme_media = extract_media_from_readme(readme, owner, repo, branch)
     repo_media = fetch_repo_media(owner, repo, branch)
-    updated_at = fetch_repo_updated_at(owner, repo)
+    meta = fetch_repo_meta(owner, repo)
 
     readme_set = set(readme_media)
     all_media = readme_media + [m for m in repo_media if m not in readme_set]
@@ -426,7 +539,7 @@ def fetch_node_media(node):
     # Clean readme for search: strip markdown, limit size
     readme_text = clean_readme_for_search(readme)
 
-    return all_media[:12], updated_at, readme_text
+    return all_media[:12], meta, readme_text
 
 def clean_readme_for_search(readme):
     """Clean README content for search indexing."""
@@ -496,12 +609,38 @@ def generate_media_gallery(media_urls, media_types=None):
 
     return f'''<div class="media-gallery">{"".join(items)}</div>'''
 
-def generate_card(node, media_urls, node_defs, updated_at, readme=""):
+def slugify(value):
+    """Lowercase URL slug for a package, used as its /node/<slug> route."""
+    slug = re.sub(r"[^a-z0-9]+", "-", (value or "").lower()).strip("-")
+    return slug or "package"
+
+def build_slug_map(all_nodes):
+    """Map github_url -> unique URL slug. Two repos can share a name across owners,
+    so collisions fall back to <owner>-<repo>, then a numeric suffix."""
+    slugs = {}
+    used = set()
+    for node in all_nodes:
+        github_url = node["github_url"]
+        owner, repo_name = extract_github_info(github_url)
+        base = slugify(repo_name or node["name"])
+        candidate = base
+        if candidate in used and owner:
+            candidate = slugify(f"{owner}-{repo_name}")
+        n = 2
+        while candidate in used:
+            candidate = f"{base}-{n}"
+            n += 1
+        used.add(candidate)
+        slugs[github_url] = candidate
+    return slugs
+
+def generate_card(node, media_urls, node_defs, updated_at, readme="", slug=""):
     """Generate HTML for a single card"""
     github_url = node["github_url"]
     # Use repo name from URL instead of package title
     _, repo_name = extract_github_info(github_url)
     name = repo_name or node["name"]
+    slug = slug or slugify(name)
     stars_raw = node["stars"]
     stars = format_stars(stars_raw)
     node_author = node["node_author"]
@@ -541,20 +680,36 @@ def generate_card(node, media_urls, node_defs, updated_at, readme=""):
     media_with_types = [{"url": url, "type": media_types.get(url, "image")} for url in media_urls] if media_urls else []
     media_data = esc_attr(json.dumps(media_with_types))
 
-    # Format updated date for display
-    updated_display = ""
-    if updated_at:
-        updated_display = updated_at[:10]  # Just the date part
+    # Last-updated badge. Colour-coded by age so a dead package is obvious at a glance
+    # without reading the date.
+    updated_display = updated_at[:10] if updated_at else ""
+    freshness = "unknown"
+    if updated_display:
+        try:
+            age = (datetime.now(timezone.utc) - datetime.strptime(updated_display, "%Y-%m-%d").replace(tzinfo=timezone.utc)).days
+            freshness = "fresh" if age <= 90 else "recent" if age <= 365 else "stale"
+        except ValueError:
+            pass
+    updated_html = (
+        f'<div class="card-updated {freshness}" title="Last pushed {updated_display}">'
+        f'<i class="far fa-clock"></i> {updated_display}</div>'
+        if updated_display else
+        '<div class="card-updated unknown" title="No push date available">'
+        '<i class="far fa-clock"></i> unknown</div>'
+    )
 
     return f'''
-                    <div class="card" data-tags="{data_tag}" data-nodes='{node_data}' data-media='{media_data}' data-stars="{stars_raw}" data-updated="{updated_at}" data-category="{category}" data-github="{github_url}" data-description="{description}" data-author="{node_author}" data-model-author="{model_author}" data-readme="{readme_escaped}" onclick="openDetail(this)">
+                    <div class="card" data-slug="{slug}" data-name="{name}" data-tags="{data_tag}" data-nodes='{node_data}' data-media='{media_data}' data-stars="{stars_raw}" data-updated="{updated_at}" data-category="{category}" data-github="{github_url}" data-description="{description}" data-author="{node_author}" data-model-author="{model_author}" data-readme="{readme_escaped}" onclick="openDetail(this)">
                         <div class="card-media" {fallback_style}>
                             {gallery_html if media_urls else ""}
                         </div>
                         <div class="card-content">
                             <div class="card-header">
                                 <div class="card-title">{name}</div>
-                                <div class="card-stars"><i class="fas fa-star"></i> {stars}</div>
+                                <div class="card-badges">
+                                    <div class="card-stars"><i class="fas fa-star"></i> {stars}</div>
+                                    {updated_html}
+                                </div>
                             </div>
                             <div class="card-authors">
                                 <span class="node-author">{node_author}</span> · <span class="model-author">{model_author}</span>
@@ -580,15 +735,34 @@ def generate_html(all_nodes_with_media, node_defs):
     for node, media, updated, readme in all_nodes_with_media:
         categories_in_use.add(node.get("category", "other-3d"))
 
-    # Generate filter buttons
-    filter_buttons = '<button class="filter-btn active" onclick="filterCards(\'all\')">All</button>\n'
+    # Package count per category, shown on the filter buttons so the size of each
+    # category is visible before clicking into it. The count element is updated live
+    # by applyFilters() as the search narrows, so these are just the initial values.
+    counts = Counter(node.get("category", "other-3d") for node, _, _, _ in all_nodes_with_media)
+
+    # Generate filter buttons. data-category is the URL slug the router reads/writes,
+    # so the button set doubles as the list of valid category routes. data-label keeps
+    # the clean name available for page titles, free of the count.
+    filter_buttons = (
+        f'<button class="filter-btn active" data-category="all" data-label="All" '
+        f'onclick="filterCards(this)">All <span class="filter-count">'
+        f'{len(all_nodes_with_media)}</span></button>\n'
+    )
     for cat_id, cat_name in CATEGORIES.items():
         if cat_id in categories_in_use:
-            filter_buttons += f'                    <button class="filter-btn" onclick="filterCards(\'{cat_id}\')">{cat_name}</button>\n'
+            filter_buttons += (
+                f'                    <button class="filter-btn" data-category="{cat_id}" '
+                f'data-label="{cat_name}" onclick="filterCards(this)">{cat_name} '
+                f'<span class="filter-count">{counts[cat_id]}</span></button>\n'
+            )
 
     # Generate all cards in one grid (sorted by stars)
     sorted_nodes = sorted(all_nodes_with_media, key=lambda x: int(x[0]["stars"]) if x[0]["stars"].isdigit() else 0, reverse=True)
-    all_cards = "\n".join(generate_card(node, media, node_defs, updated, readme) for node, media, updated, readme in sorted_nodes)
+    slug_map = build_slug_map([node for node, _, _, _ in sorted_nodes])
+    all_cards = "\n".join(
+        generate_card(node, media, node_defs, updated, readme, slug_map.get(node["github_url"], ""))
+        for node, media, updated, readme in sorted_nodes
+    )
 
     # Replace placeholders
     html = template.replace("<!-- FILTER_BUTTONS -->", filter_buttons)
@@ -648,18 +822,78 @@ def main():
         with tqdm(total=len(all_nodes), desc="Fetching media", unit="repo") as pbar:
             for future in as_completed(futures):
                 github_url = futures[future]
+                empty = ([], {"updated_at": "", "stars": None, "state": "unknown", "full_name": ""}, "")
                 try:
-                    media, updated_at, readme = future.result()
-                    media_by_url[github_url] = (media, updated_at, readme)
+                    media_by_url[github_url] = future.result()
                 except Exception:
-                    media_by_url[github_url] = ([], "", "")
+                    media_by_url[github_url] = empty
                 pbar.update(1)
+
+    # Refresh stars from the live repo data and drop packages whose repo is gone.
+    # Only a definitive 404/410 counts as gone: a failed request must never delete
+    # a package from the index.
+    empty_meta = {"updated_at": "", "stars": None, "state": "unknown", "full_name": ""}
+    gone, moved, archived, restarred = [], [], [], []
+    live_nodes = []
+    for node in all_nodes:
+        media, meta, readme = media_by_url.get(node["github_url"], ([], empty_meta, ""))
+        if meta["state"] == "gone":
+            gone.append(node)
+            continue
+        if meta["state"] == "moved":
+            moved.append((node, meta["full_name"]))
+        elif meta["state"] == "archived":
+            archived.append(node)
+        if meta["stars"] is not None:
+            was = node["stars"]
+            if str(meta["stars"]) != str(was):
+                restarred.append((node, was, meta["stars"]))
+            node["stars"] = str(meta["stars"])
+        live_nodes.append(node)
+
+    # Collapse entries that resolve to the same repo. When a repo is renamed or merged
+    # into another, GitHub keeps redirecting the old URL, so both the old and the new
+    # name sit in the CSVs and the catalog shows one project as two cards. Keep the
+    # entry whose URL matches the repo's current full_name.
+    by_repo = defaultdict(list)
+    for node in live_nodes:
+        meta = media_by_url.get(node["github_url"], ([], empty_meta, ""))[1]
+        key = (meta["full_name"] or node["github_url"]).lower()
+        by_repo[key].append(node)
+
+    deduped, dupes = [], []
+    for key, nodes in by_repo.items():
+        if len(nodes) == 1:
+            deduped.append(nodes[0])
+            continue
+        # Prefer the entry already using the repo's canonical name.
+        def canonical_name(node):
+            owner, repo = extract_github_info(node["github_url"])
+            return f"{owner}/{repo}".lower() if owner and repo else ""
+
+        canonical = next((n for n in nodes if canonical_name(n) == key), nodes[0])
+        deduped.append(canonical)
+        dupes.extend((n, canonical) for n in nodes if n is not canonical)
+
+    # Identity, not equality: two rows can compare equal as dicts.
+    keep_ids = {id(n) for n in deduped}
+    live_nodes = [n for n in live_nodes if id(n) in keep_ids]
+
+    print(f"\nLive check: {len(live_nodes)} kept, {len(gone)} hidden (repo gone), "
+          f"{len(dupes)} hidden (duplicate of a renamed repo), "
+          f"{len(archived)} archived, {len(restarred)} star counts refreshed")
+    for node in gone:
+        print(f"  gone:      {node['name'][:38]:40} {node['github_url']}")
+    for node, canonical in dupes:
+        print(f"  duplicate: {node['github_url']}  ==  {canonical['github_url']}")
 
     # Build final structure (flat list)
     all_nodes_with_media = []
-    for node in all_nodes:
-        media, updated_at, readme = media_by_url.get(node["github_url"], ([], "", ""))
-        all_nodes_with_media.append((node, media, updated_at, readme))
+    for node in live_nodes:
+        media, meta, readme = media_by_url.get(node["github_url"], ([], empty_meta, ""))
+        all_nodes_with_media.append((node, media, meta["updated_at"], readme))
+
+    warm_media_type_cache(media_by_url)
 
     # Generate HTML
     print("\nGenerating HTML...")
@@ -667,6 +901,11 @@ def main():
 
     Path(OUTPUT_FILE).write_text(html)
     print(f"Generated {OUTPUT_FILE}")
+
+    # Router paths (/gaussian-splatting, /node/<slug>) 404 on GitHub Pages without
+    # this shim, which bounces them back to index.html with the path preserved.
+    shutil.copyfile(Path(__file__).parent / "404.html", Path(OUTPUT_FILE).parent / "404.html")
+    print(f"Copied 404.html routing shim to {Path(OUTPUT_FILE).parent / '404.html'}")
 
     # Cleanup
     shutil.rmtree(CLONE_DIR, ignore_errors=True)

@@ -43,11 +43,26 @@ python3 -m venv .venv
 # Run the pipeline (from website_generation/)
 cd website_generation
 export OPENROUTER_API_KEY=...                 # your OpenRouter key
+export GITHUB_TOKEN=$(gh auth token)          # optional but strongly recommended, see below
 
 ../.venv/bin/python fetch_all_nodes.py        # 1. FETCH    -> all_comfyui_nodes_<date>.csv   (no key needed)
 ../.venv/bin/python run_deepseek_prompt.py    # 2. CLASSIFY -> ai_3d_nodes_<date>.csv + ai_non_3d_nodes_<date>.csv   (uses key, costs $)
-../.venv/bin/python generate_index.py         # 3. GENERATE -> ../index.html
+../.venv/bin/python generate_index.py         # 3. GENERATE -> ../index.html + ../404.html
 ```
+
+**Stage requirements**
+
+| Stage | Needs | Notes |
+|---|---|---|
+| 1. fetch | network | Hits `raw.githubusercontent.com` + the Comfy Registry only — no API quota involved. ~1 min. |
+| 2. classify | `OPENROUTER_API_KEY` | ~1 DeepSeek call per *new* repo. Set `TOP_N=20` to try a cheap subset first. Prompts for the key interactively if the env var is unset. |
+| 3. generate | `git`, disk, `GITHUB_TOKEN` | Shallow-clones **every** indexed repo into `/tmp/comfyui_nodes` to AST-parse node definitions, then makes ~2 GitHub API calls per repo. ~5 min. |
+
+> **Set a GitHub token for stage 3.** Anonymous API access is capped at 60 requests/hour;
+> the stage needs ~2× the package count. Without a token most repos silently fall back to
+> empty galleries and blank "last updated" dates, producing a *worse* index than the one
+> already committed. `generate_index.py` reads `GITHUB_TOKEN`/`GH_TOKEN`, falling back to
+> `gh auth token`.
 
 Then commit and push the regenerated `index.html` plus the two new dated CSVs:
 
@@ -59,6 +74,12 @@ git push
 ```
 
 **Notes**
+- **Deep links.** The page has real, shareable URLs: `/gaussian-splatting` for a category,
+  `/node/<repo-slug>` for a package, `/node/<repo-slug>/nodes` for its node list. GitHub
+  Pages can't rewrite paths, so `404.html` bounces those URLs back to `index.html` with the
+  path in `?p=` and the router restores it. Both files must be deployed together — stage 3
+  writes them both. To test locally you need a server that serves `404.html` for unknown
+  paths (plain `python -m http.server` does not).
 - **Incremental.** Both fetch and classify skip any repo already present in an
   `ai_3d_nodes*.csv` / `ai_non_3d_nodes*.csv`, so each run only processes *new* repos. The
   full catalog is the union of all dated `ai_3d_nodes*.csv` files (newest entry wins).
